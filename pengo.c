@@ -73,6 +73,7 @@ int main(int argc, char **argv)
   int png_x,png_y;
   int png_dx,png_dy;
   int png_state;
+  int png_spr;
 
   int psh_flag[MAX_PUSH];
   int psh_x[MAX_PUSH];
@@ -169,7 +170,6 @@ int main(int argc, char **argv)
   strcpy(spr_pix[14],"0011111111111100");
   strcpy(spr_pix[15],"0000000000000000");
  
-  printf("OK 0\n");
   CreateSprite(spr_pix,0,sprite_mem); 
 
   strcpy(spr_pix[1], "0111111111111110");
@@ -203,9 +203,126 @@ int main(int argc, char **argv)
   strcpy(spr_pix[12],"0000005005000000");
   strcpy(spr_pix[13],"0000005005550000");
   strcpy(spr_pix[14],"0000555000000000");
-  printf("OK 1\n");
  
   CreateSprite(spr_pix,2,sprite_mem);
+
+  strcpy(spr_pix[12],"0000005005000000");
+  strcpy(spr_pix[13],"0000555005000000");
+  strcpy(spr_pix[14],"0000000005550000");
+
+  CreateSprite(spr_pix,3,sprite_mem);
+
+  strcpy(spr_pix[10],"0040444444440400");
+  strcpy(spr_pix[11],"0040044444400400");
+  strcpy(spr_pix[12],"0000005005000000");
+  strcpy(spr_pix[13],"0000005005000000");
+  strcpy(spr_pix[14],"0000555005550000");
+
+  CreateSprite(spr_pix,4,sprite_mem);
+
+  strcpy(spr_pix[1], "0000004444000000");
+  strcpy(spr_pix[2], "0000044444400000");
+  strcpy(spr_pix[3], "0000444444440000");
+  strcpy(spr_pix[4], "0000444444440000");
+  strcpy(spr_pix[5], "0004444444444000");
+  strcpy(spr_pix[6], "0044444444444400");
+  strcpy(spr_pix[7], "0040444444440400");
+  strcpy(spr_pix[8], "0040444444440400");
+  strcpy(spr_pix[9], "0040444444440400");
+  strcpy(spr_pix[10],"0000444444440000");
+  strcpy(spr_pix[11],"0000044444400000");
+  strcpy(spr_pix[12],"0000005005000000");
+  strcpy(spr_pix[13],"0000005005550000");
+  strcpy(spr_pix[14],"0000555000000000");
+
+  CreateSprite(spr_pix,5,sprite_mem);
+
+  strcpy(spr_pix[12],"0000005005000000");
+  strcpy(spr_pix[13],"0000555005000000");
+  strcpy(spr_pix[14],"0000000005550000");
+
+  CreateSprite(spr_pix,6,sprite_mem);
+
+  strcpy(spr_pix[1], "0040004444000400");
+  strcpy(spr_pix[2], "0040044444400400");
+  strcpy(spr_pix[3], "0040444444440400");
+  strcpy(spr_pix[4], "0040444444440400");
+  strcpy(spr_pix[5], "0044444444444400");
+  strcpy(spr_pix[6], "0004444444444000");
+  strcpy(spr_pix[7], "0000444444440000");
+  strcpy(spr_pix[8], "0000444444440000");
+  strcpy(spr_pix[9], "0000444444440000");
+
+  CreateSprite(spr_pix,7,sprite_mem);
+
+  strcpy(spr_pix[1], "0000004444000000");
+  strcpy(spr_pix[2], "0000044444400000");
+  strcpy(spr_pix[3], "0000024444440000");
+  strcpy(spr_pix[4], "0000094444440000");
+  strcpy(spr_pix[5], "0000044444444000");
+  strcpy(spr_pix[6], "0000554744474000");
+  strcpy(spr_pix[7], "0005554744474000");
+  strcpy(spr_pix[8], "0000044744744000");
+  strcpy(spr_pix[9], "0000044744744000");
+  strcpy(spr_pix[10],"0000044477444000");
+  strcpy(spr_pix[11],"0000004444440000");
+  strcpy(spr_pix[12],"0000000505000000");
+  strcpy(spr_pix[13],"0000000500500000");
+  strcpy(spr_pix[14],"0000055505500000");
+  
+  CreateSprite(spr_pix,8,sprite_mem);
+
+  strcpy(spr_pix[12],"0000000505000000");
+  strcpy(spr_pix[13],"0000505005000000");
+  strcpy(spr_pix[14],"0000050555000000");
+
+  CreateSprite(spr_pix,9,sprite_mem);
+
+  strcpy(spr_pix[7], "0444444444474000");
+  strcpy(spr_pix[8], "0044444444744000");
+  strcpy(spr_pix[9], "0000047777444000");
+  strcpy(spr_pix[10],"0000044444444000");
+  strcpy(spr_pix[11],"0000004444440000");
+  strcpy(spr_pix[12],"0000000055000000");
+  strcpy(spr_pix[13],"0000000055000000");
+  strcpy(spr_pix[14],"0000005555000000");
+
+  CreateSprite(spr_pix,10,sprite_mem);
+
+  strcpy(spr_pix[1], "0000004444000000");
+  strcpy(spr_pix[2], "0000044444400000");
+  strcpy(spr_pix[3], "0000444444200000");
+  strcpy(spr_pix[4], "0000444444900000");
+  strcpy(spr_pix[5], "0004444444400000");
+  strcpy(spr_pix[6], "0004744474550000");
+  strcpy(spr_pix[7], "0004744474555000");
+  strcpy(spr_pix[8], "0004474474400000");
+  strcpy(spr_pix[9], "0004474474400000");
+  strcpy(spr_pix[10],"0004447744400000");
+  strcpy(spr_pix[11],"0000444444000000");
+  strcpy(spr_pix[12],"0000050500000000");
+  strcpy(spr_pix[13],"0000500500000000");
+  strcpy(spr_pix[14],"0000050555000000");
+  
+  CreateSprite(spr_pix,11,sprite_mem);
+
+  strcpy(spr_pix[12],"0000050500000000");
+  strcpy(spr_pix[13],"0000050050500000");
+  strcpy(spr_pix[14],"0000055505000000");
+
+  CreateSprite(spr_pix,12,sprite_mem);
+
+  strcpy(spr_pix[7], "0004744444444440");
+  strcpy(spr_pix[8], "0004474444444400");
+  strcpy(spr_pix[9], "0004447777400000");
+  strcpy(spr_pix[10],"0004444444400000");
+  strcpy(spr_pix[11],"0000444444000000");
+  strcpy(spr_pix[12],"0000005500000000");
+  strcpy(spr_pix[13],"0000005500000000");
+  strcpy(spr_pix[14],"0000005555000000");
+
+  CreateSprite(spr_pix,13,sprite_mem);
+
 
   theLalEnv = new LalEnv(argc,argv);
   theLal = new Lal("Pengo",100,100);
@@ -239,6 +356,7 @@ int main(int argc, char **argv)
 
   png_x = 8;
   png_y = 8;
+  elec_cnt = 0;
 
   PutSprite(pixmap,sprite_mem,2,png_x*16-W_BRDR,png_y*16-W_BRDR);
 
@@ -250,16 +368,62 @@ int main(int argc, char **argv)
   running=1;
   while(running)
   {
+    png_dx = 0;
+    png_dy = 0;
     key = theLal->GetTheKeyNoBlock();
     if (key != -1)
     {
-       printf("Key pressed: %04X\n", key);
-       if (key == LEFT_ARROW_K)
-       {
-         running = 0;
-       }
+      switch(key)
+      {
+        case UP_ARROW_K:
+          png_dx = 0;
+          png_dy = -1;
+          png_spr = 5;
+          break;
+        case DOWN_ARROW_K:
+          png_dx = 0;
+          png_dy = 1;
+          png_spr = 2;
+          break;
+        case LEFT_ARROW_K:
+          png_dx = -1;
+          png_dy = 0;
+          png_spr = 8;
+          break;
+        case RIGHT_ARROW_K:
+          png_dx = 1;
+          png_dy = 0;
+          png_spr = 11;
+          break;
+        default:
+          running = 0;
+          break;
+      }
     }
-    usleep(20000);
+    movePengo(map,png_x,png_y,png_dx,png_dy,&png_state,elec_cnt);
+    printf("state = %d ; dx = %d ; dy = %d\n", png_state,png_dx,png_dy);
+    if (png_state == IDLE)
+    {
+      png_dx = 0;
+      png_dy = 0;
+    }
+    if ((png_state == PUSHING) || (png_state == ELEC) || (png_state == CRASHING))
+    {
+      PutSprite(pixmap,sprite_mem,png_spr+2,png_x*16-W_BRDR,png_y*16-W_BRDR);
+      png_dx = 0;
+      png_dy = 0;
+    }
+    for (i = 0 ; i < 16 ; i++)
+    {
+      if (png_state == MOVING)
+      {
+        PutSprite(pixmap,sprite_mem,png_spr+(i%2),png_x*16+png_dx*i-W_BRDR,png_y*16+png_dy*i-W_BRDR);
+      }
+      theLal->Update();
+      usleep(20000);
+    }
+    png_x+=png_dx;
+    png_y+=png_dy;
   }
   
   delete theLal;
@@ -274,29 +438,6 @@ void movePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_
   int p_state;
 
   p_state = IDLE;
-
-  // check keyboard
-
-  /*
-  k = getKey();
-  switch(k)
-  {
-    case UP: dp_x = 0;
-             dp_y = 1;
-             break;
-    case DN: dp_x = 0;
-             dp_y = -1;
-             break;
-    case RT: dp_x = 1;
-             dp_y = 0;
-             break;
-    case LT: dp_x = -1;
-             dp_y = 0;
-             break;
-    default: dp_x = 0 ;
-             dp_y = 0;
-  }
-  */
 
   if ((png_dx != 0) || (png_dy != 0))
   {
@@ -615,7 +756,7 @@ void CreateSprite(char **spr_pix,int sprite_num,unsigned char *sprite_mem)
   LUT[4] = 50 ; // red 
   LUT[5] = 100 ; // yellow 
   LUT[6] = 254;
-  LUT[7] = 254;
+  LUT[7] = 30;  // dark red
   LUT[8] = 254;
   LUT[9] = 254;
 
