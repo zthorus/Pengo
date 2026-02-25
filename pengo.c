@@ -33,13 +33,19 @@
 #define SHOCKED 9
 
 #define MAX_PUSH 10
+#define MAX_CRASH 10
 #define NB_SNOBEE 3
 
-#define NB_SPRITES 16
+#define HORIZONTAL 0
+#define VERTICAL   1
+
+#define NB_SPRITES 24 
 
 void movePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_state, int elec_cnt);
 
 void NewCubePushed(int **map,int *psh_flag,int *psh_x,int *psh_y, int *psh_dx,int *psh_dy,int *psh_typ,int p_x,int p_y,int dp_x,int dp_y);
+
+void NewCubeCrashed(int *crsh_flag,int *crsh_x,int *crsh_y,int x,int y);
 
 void CheckSnobeePushed(int **map,int *snb_x,int *snb_y, int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy);
 
@@ -47,12 +53,15 @@ void CheckCubeStopped(int **map,int *snb_x,int *snb_y,int *snb_state,int *psh_fl
 
 void ShockSnobee(int *snb_x,int *snb_y,int snb_state,int png_x,int png_y,int png_dx,int png_dy);
 
+void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y);
+
 void CreateMap(int **map);
 
 void CreateSprite(char **spr_pix,int sprite_num,unsigned char *sprite_mem); 
 
 void PutSprite(unsigned char **pixmap,unsigned char *sprite_mem, int sprite_num, int x, int y);
 
+void EraseSprite(unsigned char **pixmap,int x,int y);
 
 int main(int argc, char **argv)
 {
@@ -82,11 +91,26 @@ int main(int argc, char **argv)
   int psh_dy[MAX_PUSH];
   int psh_typ[MAX_PUSH];
 
+  int crsh_flag[MAX_CRASH];
+  int crsh_x[MAX_CRASH];
+  int crsh_y[MAX_CRASH];
+
+  int snb_state[NB_SNOBEE];
+  int snb_x[NB_SNOBEE];
+  int snb_y[NB_SNOBEE];
+  int snb_dx[NB_SNOBEE];
+  int snb_dy[NB_SNOBEE];
+  int snb_ax[NB_SNOBEE];
+  int snb_spr;
+
   int elec_cnt;
 
-  int i,j;
+  int i,j,k;
   int key;
   int running;
+  int xc,yc;
+  int dxc,dyc;
+  int ct;
 
   
   pixmap = (unsigned char **)malloc(pmx*sizeof(unsigned char *));
@@ -323,6 +347,95 @@ int main(int argc, char **argv)
 
   CreateSprite(spr_pix,13,sprite_mem);
 
+  strcpy(spr_pix[0], "0000000000000000");
+  strcpy(spr_pix[1], "0000000000000000");
+  strcpy(spr_pix[2], "0000000000000000");
+  strcpy(spr_pix[3], "0000000000000000");
+  strcpy(spr_pix[4], "0100110101101210");
+  strcpy(spr_pix[5], "0101111111110110");
+  strcpy(spr_pix[6], "0110011111101110");
+  strcpy(spr_pix[7], "0111101111101110");
+  strcpy(spr_pix[8], "0111010111010010");
+  strcpy(spr_pix[9], "0110111110011010");
+  strcpy(spr_pix[10],"0110111101111110");
+  strcpy(spr_pix[11],"0101011011011210");
+  strcpy(spr_pix[12],"0121101011101210");
+  strcpy(spr_pix[13],"0112011011020110");
+  strcpy(spr_pix[14],"0011111111111100");
+  strcpy(spr_pix[15],"0000000000000000");
+
+  CreateSprite(spr_pix,14,sprite_mem);
+
+  strcpy(spr_pix[4], "0000000000000000");
+  strcpy(spr_pix[5], "0000000000000000");
+  strcpy(spr_pix[6], "0000000000000000");
+  strcpy(spr_pix[7], "0001001010001100");
+
+  CreateSprite(spr_pix,15,sprite_mem);
+
+  strcpy(spr_pix[7], "0000000000000000");
+  strcpy(spr_pix[8], "0000000000000000");
+  strcpy(spr_pix[9], "0000000000000000");
+  strcpy(spr_pix[10],"0001001011001010");
+
+  CreateSprite(spr_pix,16,sprite_mem);
+  
+  strcpy(spr_pix[10],"0000000000000000");
+  strcpy(spr_pix[11],"0000000000000000");
+  strcpy(spr_pix[12],"0000000000000000");
+  strcpy(spr_pix[13],"0002001010000100");
+
+  CreateSprite(spr_pix,17,sprite_mem);
+
+  strcpy(spr_pix[0], "0000000000000000");
+  strcpy(spr_pix[1], "0000000000000000");
+  strcpy(spr_pix[2], "0000006666000000");
+  strcpy(spr_pix[3], "0000066666600000");
+  strcpy(spr_pix[4], "0000666666660000");
+  strcpy(spr_pix[5], "0006662662666000");
+  strcpy(spr_pix[6], "0006669669666000");
+  strcpy(spr_pix[7], "0066666666666600");
+  strcpy(spr_pix[8], "0066666556666600");
+  strcpy(spr_pix[9], "0066666666666600");
+  strcpy(spr_pix[10],"0066666666666600");
+  strcpy(spr_pix[11],"0066666666666600");
+  strcpy(spr_pix[12],"0006666666666000");
+  strcpy(spr_pix[13],"0000666666660000");
+  strcpy(spr_pix[14],"0000000000000000");
+  strcpy(spr_pix[15],"0000000000000000");
+
+  CreateSprite(spr_pix,18,sprite_mem);
+
+  strcpy(spr_pix[5], "0006666666666000");
+  strcpy(spr_pix[6], "0006666666666000");
+  strcpy(spr_pix[8], "0066666666666600");
+  
+  CreateSprite(spr_pix,19,sprite_mem);
+
+  strcpy(spr_pix[4], "0000666666600000");
+  strcpy(spr_pix[5], "0006666666620000");
+  strcpy(spr_pix[6], "0006666666690000");
+  strcpy(spr_pix[7], "0066666666660000");
+  strcpy(spr_pix[8], "0066666666655500");
+  strcpy(spr_pix[9], "0066666666660000");
+  strcpy(spr_pix[10],"0066666666660000");
+  strcpy(spr_pix[11],"0066666666600000");
+  strcpy(spr_pix[12],"0066666666600000");
+  strcpy(spr_pix[13],"0006666666000000");
+
+  CreateSprite(spr_pix,20,sprite_mem);
+
+  strcpy(spr_pix[5], "0000266666666000");
+  strcpy(spr_pix[6], "0000966666666000");
+  strcpy(spr_pix[7], "0000666666666600");
+  strcpy(spr_pix[8], "0055566666666600");
+  strcpy(spr_pix[9], "0000666666666600");
+  strcpy(spr_pix[10],"0000666666666600");
+  strcpy(spr_pix[11],"0000066666666600");
+  strcpy(spr_pix[12],"0000066666666600");
+  strcpy(spr_pix[13],"0000006666666000");
+
+  CreateSprite(spr_pix,21,sprite_mem);
 
   theLalEnv = new LalEnv(argc,argv);
   theLal = new Lal("Pengo",100,100);
@@ -330,7 +443,7 @@ int main(int argc, char **argv)
 
   printf("OK 2\n");
   theLal->SetLut(COLOR);
-  theLal->NewMap("Pengo",Lblue,0,0,pmx,pmy,2,pixmap,&pt);
+  theLal->NewMap("Pengo",Lblue,0,0,pmx,pmy,3,pixmap,&pt);
   theLal->Prepare();
   theLal->Show();
 
@@ -356,7 +469,29 @@ int main(int argc, char **argv)
 
   png_x = 8;
   png_y = 8;
+
+  snb_x[0] = 2;
+  snb_y[0] = 2;
+  snb_ax[0] = VERTICAL;
+  snb_dx[0] = 0;
+  snb_dy[0] = 1;
+  snb_state[0] = ACTIVE;
+  snb_x[1] = 12;
+  snb_y[1] = 2;
+  snb_ax[1] = HORIZONTAL;
+  snb_dx[1] = -1;
+  snb_dy[1] = 0;
+  snb_state[1] = ACTIVE;
+  snb_x[2] = 12;
+  snb_y[2] = 12;
+  snb_ax[2] = VERTICAL;
+  snb_dx[2] = 0;
+  snb_dy[2] = -1;
+  snb_state[2] = ACTIVE;
+
   elec_cnt = 0;
+  for (i = 0 ; i < MAX_PUSH ; i++) psh_flag[i] = 0;
+  for (i = 0 ; i < MAX_CRASH ; i++) crsh_flag[i] = 0;
 
   PutSprite(pixmap,sprite_mem,2,png_x*16-W_BRDR,png_y*16-W_BRDR);
 
@@ -402,6 +537,14 @@ int main(int argc, char **argv)
     }
     movePengo(map,png_x,png_y,png_dx,png_dy,&png_state,elec_cnt);
     printf("state = %d ; dx = %d ; dy = %d\n", png_state,png_dx,png_dy);
+    if (png_state == PUSHING)
+    {
+      NewCubePushed(map,psh_flag,psh_x,psh_y,psh_dx,psh_dy,psh_typ,png_x,png_y,png_dx,png_dy);
+    }
+    if (png_state == CRASHING)
+    {
+      NewCubeCrashed(crsh_flag,crsh_x,crsh_y,png_x+png_dx,png_y+png_dy);
+    }
     if (png_state == IDLE)
     {
       png_dx = 0;
@@ -413,17 +556,99 @@ int main(int argc, char **argv)
       png_dx = 0;
       png_dy = 0;
     }
-    for (i = 0 ; i < 16 ; i++)
+    MoveSnobees(map,snb_state,snb_x,snb_y,snb_dx,snb_dy,snb_ax,png_x,png_y,crsh_flag,crsh_x,crsh_y);
+    printf("snobee motion OK\n");
+    // animations
+
+    for (i = 1 ; i <= 16 ; i++)
     {
+      // pengo
+
       if (png_state == MOVING)
       {
         PutSprite(pixmap,sprite_mem,png_spr+(i%2),png_x*16+png_dx*i-W_BRDR,png_y*16+png_dy*i-W_BRDR);
       }
+
+      // pushed cubes (moving twice faster than other sprites)
+
+      for (j = 0 ; j < MAX_PUSH ; j++)
+      {
+        if (psh_flag[j] == 1)
+        {
+          xc = psh_x[j];
+          yc = psh_y[j];
+          dxc = psh_dx[j];
+          dyc = psh_dy[j];
+          ct = psh_typ[j];
+          k = i%8;
+          printf("xc = %d ; yc = %d ; dxc = %d ; dyc = %d ; ct = %d\n",xc,yc,dxc,dyc,ct); 
+          if ((i == 8) || (i == 16))
+          {
+            // cube has moved from cell
+            map[xc][yc] = 0;
+            map[xc+dxc][yc+dyc] = ct;
+            // check if cube can still move
+            if (map[xc+2*dxc][yc+2*dyc] != 0) psh_flag[j] = 0;
+            psh_x[j] += dxc;
+            psh_y[j] += dyc;
+            xc = psh_x[j];
+            yc = psh_y[j];
+          }
+          EraseSprite(pixmap,xc*16+2*dxc*(k-1)-W_BRDR,yc*16+2*dyc*(k-1)-W_BRDR);
+          PutSprite(pixmap,sprite_mem,ct-1,xc*16+2*dxc*k-W_BRDR,yc*16+2*dyc*k-W_BRDR);
+        }
+      }
+
+      // crashed cubes
+      
+      for (j = 0 ; j < MAX_CRASH ; j++)
+      {
+        if (crsh_flag[j] == 1)
+        {
+          xc = crsh_x[j];
+          yc = crsh_y[j];
+          k= i/4;
+          if (k != 4) PutSprite(pixmap,sprite_mem,14+k,xc*16-W_BRDR,yc*16-W_BRDR);
+          else // if i == 16 (end of animation loop)
+          {
+            EraseSprite(pixmap,xc*16-W_BRDR,yc*16-W_BRDR);
+            map[xc][yc] = 0;
+            crsh_flag[j] = 0;
+          }
+        }
+      }
+
+      // snobees
+
+      for (j = 0 ; j < NB_SNOBEE ; j++)
+      {
+        if (snb_state[j] == ACTIVE)
+        {
+          k = (i/4)%2;
+          snb_spr = 18; 
+          if ((snb_dx[j] == 0) && (snb_dy[j] == 1)) snb_spr = 18; 
+          if ((snb_dx[j] == 0) && (snb_dy[j] == -1)) snb_spr = 19; 
+          if ((snb_dx[j] == 1) && (snb_dy[j] == 0)) snb_spr = 20; 
+          if ((snb_dx[j] == -1) && (snb_dy[j] == 0)) snb_spr = 21;
+    //      printf("snb_x = %d ; snb_dx = %d ; snb_y = %d ; snb_dy = %d\n",snb_x[j],snb_dx[j],snb_y[j],snb_dy[j]); 
+          PutSprite(pixmap,sprite_mem,snb_spr,snb_x[j]*16+snb_dx[j]*i+k-W_BRDR,snb_y[j]*16+snb_dy[j]*i+k-W_BRDR);
+     //    printf("Put snobee sprite OK\n");
+        }
+      } 
       theLal->Update();
-      usleep(20000);
+      usleep(16000);
     }
+    // update player coordinates on map 
     png_x+=png_dx;
     png_y+=png_dy;
+    for (j = 0 ; j < NB_SNOBEE ; j++)
+    {
+      if (snb_state[j] == ACTIVE)
+      {
+        snb_x[j] += snb_dx[j];
+        snb_y[j] += snb_dy[j];
+      }
+    }
   }
   
   delete theLal;
@@ -496,6 +721,23 @@ void NewCubePushed(int **map,int *psh_flag,int *psh_x,int *psh_y, int *psh_dx,in
   }
 }
 
+void NewCubeCrashed(int *crsh_flag,int *crsh_x,int *crsh_y,int x,int y)
+{
+  int i;
+ 
+  // allocate entry in table
+  for (i = 0 ; i < MAX_CRASH; i++)
+  {
+    if (crsh_flag[i] == 0)
+    {
+      crsh_flag[i] = 1;
+      crsh_x[i] = x;
+      crsh_y[i] = y;
+      break;
+    }
+  }
+}
+  
 void CheckSnobeePushed(int **map,int *snb_x,int *snb_y, int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy)
 {
   int i,j;
@@ -566,6 +808,86 @@ void ShockSnobee(int *snb_x,int *snb_y,int *snb_state,int png_x,int png_y,int pn
     }
   }
 }
+
+
+void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y)
+{
+  int i;
+  int change_axis;
+
+  for (i = 0 ; i < NB_SNOBEE ; i++)
+  {
+    if (snb_state[i] == ACTIVE)
+    {
+      change_axis = 0;
+      if (snb_ax[i] == VERTICAL)
+      {
+        if (snb_dy[i] == 0) // i.e., if snobee was crashing cube before...
+        { 
+          if ((snb_y[i] - p_y) > 0) snb_dy[i] = -1; 
+          if ((snb_y[i] - p_y) < 0) snb_dy[i] = 1; 
+        }
+        if (snb_y[i] == p_y) change_axis = 1;
+        else
+        {
+          if (map[snb_x[i]][snb_y[i]+snb_dy[i]] != 0)
+          {
+          //  if (((snb_y[i]%2) == 0) && (map[snb_x[i]][snb_y[i]+snb_dy[i]] != ICE))
+          //    change_axis = 1;
+          
+            if ((map[snb_x[i]][snb_y[i]+snb_dy[i]] == ICE) && ((rand()%2) == 1))
+            {
+              NewCubeCrashed(crsh_flag,crsh_x,crsh_y,snb_x[i]+snb_dx[i],snb_y[i]+snb_dy[i]);
+              snb_dy[i] = 0;
+            }
+            else change_axis = 1;
+          }
+        }
+        if (change_axis == 1)
+        {
+          snb_ax[i] = HORIZONTAL;
+          snb_dy[i] = 0;
+          if ((snb_x[i] - p_x) > 0) snb_dx[i] = -1; 
+          if ((snb_x[i] - p_x) < 0) snb_dx[i] = 1; 
+        }
+      }
+      else
+      {
+        if (snb_dx[i] == 0)
+        {
+          if ((snb_x[i] - p_x) > 0) snb_dx[i] = -1; 
+          if ((snb_x[i] - p_x) < 0) snb_dx[i] = 1;
+        } 
+        if (snb_x[i] == p_x) change_axis = 1;
+        else
+        {
+          if (map[snb_x[i]+snb_dx[i]][snb_y[i]] != 0)
+          {
+            //if (((snb_x[i]%2) == 0) && (map[snb_x[i]+snb_dx[i]][snb_y[i]] != ICE))
+             // change_axis = 1;
+            if ((map[snb_x[i]+snb_dx[i]][snb_y[i]] == ICE) && ((rand()%2) == 1))
+            {
+              NewCubeCrashed(crsh_flag,crsh_x,crsh_y,snb_x[i]+snb_dx[i],snb_y[i]+snb_dy[i]);
+              snb_dx[i] = 0;
+            }
+            else change_axis = 1;
+          }
+        }
+        if (change_axis == 1)
+        {
+          snb_ax[i] = VERTICAL;
+          snb_dx[i] = 0;
+          if ((snb_y[i] - p_y) > 0) snb_dy[i] = -1; 
+          if ((snb_y[i] - p_y) < 0) snb_dy[i] = 1; 
+        }
+         
+      }
+    }
+    printf("snb_dx = %d ; snb_dy = %d ; snb_ax = %d ; axis changed = %d\n", snb_dx[i],snb_dy[i],snb_ax[i],change_axis); 
+  }
+} 
+
+
   
 void CreateMap(int **map)
 {
@@ -754,8 +1076,8 @@ void CreateSprite(char **spr_pix,int sprite_num,unsigned char *sprite_mem)
   LUT[2] = 212 ; // light cyan
   LUT[3] = 178 ; // green 
   LUT[4] = 50 ; // red 
-  LUT[5] = 100 ; // yellow 
-  LUT[6] = 254;
+  LUT[5] = 90 ; // yellow 
+  LUT[6] = 80; // orange
   LUT[7] = 30;  // dark red
   LUT[8] = 254;
   LUT[9] = 254;
@@ -797,5 +1119,20 @@ void PutSprite(unsigned char **pixmap,unsigned char *sprite_mem, int sprite_num,
   }
 }
   
+
+// Erase a sprite from the playscreen
                     
+void EraseSprite(unsigned char **pixmap,int x,int y)
+{
+  int i,j;
+  
+  for (j = 0 ; j < 16 ; j++)
+  {
+    for (i = 0 ; i < 16 ; i++)
+    {
+      pixmap[x+i][y+j] = 208;
+    }
+  }
+}
+
     
