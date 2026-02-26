@@ -41,13 +41,13 @@
 
 #define NB_SPRITES 24 
 
-void movePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_state, int elec_cnt);
+void MovePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_state, int elec_cnt);
 
 void NewCubePushed(int **map,int *psh_flag,int *psh_x,int *psh_y, int *psh_dx,int *psh_dy,int *psh_typ,int p_x,int p_y,int dp_x,int dp_y);
 
 void NewCubeCrashed(int *crsh_flag,int *crsh_x,int *crsh_y,int x,int y);
 
-void CheckSnobeePushed(int **map,int *snb_x,int *snb_y, int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy);
+void CheckSnobeePushed(int **map,int *snb_x,int *snb_y,int *snb_dx,int *snb_dy,int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy);
 
 void CheckCubeStopped(int **map,int *snb_x,int *snb_y,int *snb_state,int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy);
 
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 
   int elec_cnt;
 
-  int i,j,k;
+  int i,j,k,l;
   int key;
   int running;
   int xc,yc;
@@ -535,7 +535,7 @@ int main(int argc, char **argv)
           break;
       }
     }
-    movePengo(map,png_x,png_y,png_dx,png_dy,&png_state,elec_cnt);
+    MovePengo(map,png_x,png_y,png_dx,png_dy,&png_state,elec_cnt);
     printf("state = %d ; dx = %d ; dy = %d\n", png_state,png_dx,png_dy);
     if (png_state == PUSHING)
     {
@@ -557,6 +557,7 @@ int main(int argc, char **argv)
       png_dy = 0;
     }
     MoveSnobees(map,snb_state,snb_x,snb_y,snb_dx,snb_dy,snb_ax,png_x,png_y,crsh_flag,crsh_x,crsh_y);
+    CheckSnobeePushed(map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy);
     printf("snobee motion OK\n");
     // animations
 
@@ -588,11 +589,32 @@ int main(int argc, char **argv)
             map[xc][yc] = 0;
             map[xc+dxc][yc+dyc] = ct;
             // check if cube can still move
-            if (map[xc+2*dxc][yc+2*dyc] != 0) psh_flag[j] = 0;
+            if (map[xc+2*dxc][yc+2*dyc] != 0)
+            {
+              psh_flag[j] = 0;
+              // check if snobee was crushed by cube
+              for (l = 0 ; l < NB_SNOBEE ; l++)
+              {
+                if ((snb_state[l] == CRUSHED) && (snb_x[l] == xc+dxc) && (snb_y[l] == yc+dyc))
+                  snb_state[l] = DEAD;
+              }
+            }
             psh_x[j] += dxc;
             psh_y[j] += dyc;
             xc = psh_x[j];
             yc = psh_y[j];
+            // update coordinates of pushed snobees
+            for (l = 0 ; l < NB_SNOBEE ; l++)
+            {
+              if ((snb_state[l] == PUSHED) && (snb_x[l] == xc) && (snb_y[l] == yc))
+              {
+                snb_x[l] += dxc;
+                snb_y[l] += dyc;
+              }
+            } 
+            // check if Snobee half-way in front of cube => pushed or crashed
+            if (i == 8)
+              CheckSnobeePushed(map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy);
           }
           EraseSprite(pixmap,xc*16+2*dxc*(k-1)-W_BRDR,yc*16+2*dyc*(k-1)-W_BRDR);
           PutSprite(pixmap,sprite_mem,ct-1,xc*16+2*dxc*k-W_BRDR,yc*16+2*dyc*k-W_BRDR);
@@ -622,17 +644,25 @@ int main(int argc, char **argv)
 
       for (j = 0 ; j < NB_SNOBEE ; j++)
       {
-        if (snb_state[j] == ACTIVE)
+        switch(snb_state[j])
         {
-          k = (i/4)%2;
-          snb_spr = 18; 
-          if ((snb_dx[j] == 0) && (snb_dy[j] == 1)) snb_spr = 18; 
-          if ((snb_dx[j] == 0) && (snb_dy[j] == -1)) snb_spr = 19; 
-          if ((snb_dx[j] == 1) && (snb_dy[j] == 0)) snb_spr = 20; 
-          if ((snb_dx[j] == -1) && (snb_dy[j] == 0)) snb_spr = 21;
-    //      printf("snb_x = %d ; snb_dx = %d ; snb_y = %d ; snb_dy = %d\n",snb_x[j],snb_dx[j],snb_y[j],snb_dy[j]); 
-          PutSprite(pixmap,sprite_mem,snb_spr,snb_x[j]*16+snb_dx[j]*i+k-W_BRDR,snb_y[j]*16+snb_dy[j]*i+k-W_BRDR);
-     //    printf("Put snobee sprite OK\n");
+          case ACTIVE:
+            k = (i/4)%2;
+            snb_spr = 18; 
+            if ((snb_dx[j] == 0) && (snb_dy[j] == 1)) snb_spr = 18; 
+            if ((snb_dx[j] == 0) && (snb_dy[j] == -1)) snb_spr = 19; 
+            if ((snb_dx[j] == 1) && (snb_dy[j] == 0)) snb_spr = 20; 
+            if ((snb_dx[j] == -1) && (snb_dy[j] == 0)) snb_spr = 21;
+            PutSprite(pixmap,sprite_mem,snb_spr,snb_x[j]*16+snb_dx[j]*i+k-W_BRDR,snb_y[j]*16+snb_dy[j]*i+k-W_BRDR);
+            break;
+
+          case PUSHED:
+            PutSprite(pixmap,sprite_mem,18,snb_x[j]*16+2*snb_dx[j]*i-W_BRDR,snb_y[j]*16+2*snb_dy[j]*i-W_BRDR);
+            break;
+
+          case CRUSHED:
+            PutSprite(pixmap,sprite_mem,18,snb_x[j]*16-W_BRDR,snb_y[j]*16-W_BRDR);
+            break;
         }
       } 
       theLal->Update();
@@ -658,7 +688,7 @@ int main(int argc, char **argv)
 }
 
 
-void movePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_state, int elec_cnt)
+void MovePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_state, int elec_cnt)
 {
   int p_state;
 
@@ -738,7 +768,7 @@ void NewCubeCrashed(int *crsh_flag,int *crsh_x,int *crsh_y,int x,int y)
   }
 }
   
-void CheckSnobeePushed(int **map,int *snb_x,int *snb_y, int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy)
+void CheckSnobeePushed(int **map,int *snb_x,int *snb_y,int *snb_dx,int *snb_dy,int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy)
 {
   int i,j;
 
@@ -752,18 +782,43 @@ void CheckSnobeePushed(int **map,int *snb_x,int *snb_y, int *snb_state, int *psh
         if ((snb_state[j] == ACTIVE) || (snb_state[j] == PUSHED))
         {
           if (((psh_x[i]+psh_dx[i]) == snb_x[j]) &&
-              ((psh_y[i]+psh_dy[j]) == snb_y[j]))
+              ((psh_y[i]+psh_dy[i]) == snb_y[j]))
+
           {
-            // look if snobee crushed against static cube or border
             if (map[psh_x[i]+2*psh_dx[i]][psh_y[i]+2*psh_dy[i]] != 0)
             {
               snb_state[j] = CRUSHED;
+              snb_dx[j] = 0;
+              snb_dy[j] = 0;
             }
             else
             {
               snb_state[j] = PUSHED;
+              snb_dx[j] = psh_dx[i];
+              snb_dy[j] = psh_dy[i];
             }
           }
+          // look if snobee is about to cross a pushed cube
+          // (can also be half-way).  If so, consider it doomed 
+          if (((psh_x[i]+psh_dx[i]) == (snb_x[j]+snb_dx[j])) &&
+              ((psh_y[i]+psh_dy[i]) == (snb_y[j]+snb_dy[j])))
+          {
+            if (map[psh_x[i]+2*psh_dx[i]][psh_y[i]+2*psh_dy[i]] != 0)
+            {
+              snb_state[j] = CRUSHED;
+              snb_dx[j] = 0;
+              snb_dy[j] = 0;
+            }
+            else
+            {
+              snb_state[j] = PUSHED;
+              snb_dx[j] = psh_dx[i];
+              snb_dy[j] = psh_dy[i];
+            }
+            // force snobee to be in front of pushed cube
+            snb_x[j] += snb_dx[j];
+            snb_x[j] += snb_dx[j];
+          } 
         }
       }
     }
@@ -812,7 +867,7 @@ void ShockSnobee(int *snb_x,int *snb_y,int *snb_state,int png_x,int png_y,int pn
 
 void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y)
 {
-  int i;
+  int i,k;
   int change_axis;
 
   for (i = 0 ; i < NB_SNOBEE ; i++)
@@ -820,6 +875,7 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
     if (snb_state[i] == ACTIVE)
     {
       change_axis = 0;
+      k = rand()%3;
       if (snb_ax[i] == VERTICAL)
       {
         if (snb_dy[i] == 0) // i.e., if snobee was crashing cube before...
@@ -832,15 +888,16 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
         {
           if (map[snb_x[i]][snb_y[i]+snb_dy[i]] != 0)
           {
-          //  if (((snb_y[i]%2) == 0) && (map[snb_x[i]][snb_y[i]+snb_dy[i]] != ICE))
-          //    change_axis = 1;
-          
-            if ((map[snb_x[i]][snb_y[i]+snb_dy[i]] == ICE) && ((rand()%2) == 1))
+            if ((map[snb_x[i]][snb_y[i]+snb_dy[i]] == ICE) && (k == 0))
             {
               NewCubeCrashed(crsh_flag,crsh_x,crsh_y,snb_x[i]+snb_dx[i],snb_y[i]+snb_dy[i]);
               snb_dy[i] = 0;
             }
-            else change_axis = 1;
+            else
+            {
+              if (k == 2) snb_dy[i] = -snb_dy[i];
+              else change_axis = 1;
+            }
           }
         }
         if (change_axis == 1)
@@ -863,14 +920,16 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
         {
           if (map[snb_x[i]+snb_dx[i]][snb_y[i]] != 0)
           {
-            //if (((snb_x[i]%2) == 0) && (map[snb_x[i]+snb_dx[i]][snb_y[i]] != ICE))
-             // change_axis = 1;
-            if ((map[snb_x[i]+snb_dx[i]][snb_y[i]] == ICE) && ((rand()%2) == 1))
+            if ((map[snb_x[i]+snb_dx[i]][snb_y[i]] == ICE) && (k == 0))
             {
               NewCubeCrashed(crsh_flag,crsh_x,crsh_y,snb_x[i]+snb_dx[i],snb_y[i]+snb_dy[i]);
               snb_dx[i] = 0;
             }
-            else change_axis = 1;
+            else 
+            {
+              if (k == 2) snb_dx[i] = -snb_dx[i];
+              else change_axis = 1;
+            }
           }
         }
         if (change_axis == 1)
@@ -882,6 +941,7 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
         }
          
       }
+      snb_dx[i] = snb_dy[i] = 0;
     }
     printf("snb_dx = %d ; snb_dy = %d ; snb_ax = %d ; axis changed = %d\n", snb_dx[i],snb_dy[i],snb_ax[i],change_axis); 
   }
