@@ -53,7 +53,7 @@ void CheckCubeStopped(int **map,int *snb_x,int *snb_y,int *snb_state,int *psh_fl
 
 void ShockSnobee(int *snb_x,int *snb_y,int snb_state,int png_x,int png_y,int png_dx,int png_dy);
 
-void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y);
+void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_dm, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y);
 
 void CreateMap(int **map);
 
@@ -100,6 +100,7 @@ int main(int argc, char **argv)
   int snb_y[NB_SNOBEE];
   int snb_dx[NB_SNOBEE];
   int snb_dy[NB_SNOBEE];
+  int snb_dm[NB_SNOBEE];
   int snb_ax[NB_SNOBEE];
   int snb_spr;
 
@@ -498,7 +499,7 @@ int main(int argc, char **argv)
   snb_x[1] = 10;
   snb_y[1] = 4;
   snb_ax[1] = HORIZONTAL;
-  snb_dx[1] = -1;
+  snb_dx[1] = 1;
   snb_dy[1] = 0;
   snb_state[1] = ACTIVE;
   snb_x[2] = 10;
@@ -575,7 +576,7 @@ int main(int argc, char **argv)
       png_dx = 0;
       png_dy = 0;
     }
-    MoveSnobees(map,snb_state,snb_x,snb_y,snb_dx,snb_dy,snb_ax,png_x,png_y,crsh_flag,crsh_x,crsh_y);
+    MoveSnobees(map,snb_state,snb_x,snb_y,snb_dx,snb_dy,snb_dm,snb_ax,png_x,png_y,crsh_flag,crsh_x,crsh_y);
     CheckSnobeePushed(map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy);
     printf("snobee motion OK\n");
     // animations
@@ -891,110 +892,91 @@ void ShockSnobee(int *snb_x,int *snb_y,int *snb_state,int png_x,int png_y,int pn
 }
 
 
-void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y)
+void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_dm, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y)
 {
-  int i,k;
-  int change_axis;
+  int i,k,m;
+  int findingNextMove;
 
   for (i = 0 ; i < NB_SNOBEE ; i++)
   {
     if (snb_state[i] == ACTIVE)
     {
-      change_axis = 0;
-      k = rand()%3;
-      if (snb_ax[i] == VERTICAL)
+      findingNextMove = 1;
+      while(findingNextMove)
       {
-        if (snb_dy[i] == 0) // i.e., if snobee was crashing cube before...
-        { 
-          if ((snb_y[i] - p_y) > 0) snb_dy[i] = -1; 
-          if ((snb_y[i] - p_y) < 0) snb_dy[i] = 1; 
-        }
-        if (snb_y[i] == p_y) change_axis = 1;
-        else
+        k = rand()%4;
+        if (snb_ax[i] == VERTICAL)
         {
-          if (map[snb_x[i]][snb_y[i]+snb_dy[i]] != 0)
+          if (snb_dy[i] == 0) snb_dy[i] = snb_dm[i]; // snobee was crashing cube
+          m = map[snb_x[i]+snb_dx[i]][snb_y[i]+snb_dy[i]];
+          if (m != 0)
           {
-            if ((map[snb_x[i]][snb_y[i]+snb_dy[i]] == ICE) && (k == 0))
+            if ((m == ICE) && (k == 0))
             {
               NewCubeCrashed(crsh_flag,crsh_x,crsh_y,snb_x[i]+snb_dx[i],snb_y[i]+snb_dy[i]);
+              snb_dm[i] = snb_dy[i]; // memorize direction
               snb_dy[i] = 0;
+              findingNextMove = 0;
             }
             else
             {
-              if (k == 2) snb_dy[i] = -snb_dy[i];
-              else change_axis = 1;
+              k = rand()%3;
+              switch(k)
+              {
+                case 0: snb_dy[i] = -snb_dy[i];
+                        break;
+                case 1: snb_ax[i] = HORIZONTAL;
+                        snb_dy[i] = 0;
+                        snb_dx[i] = -1;
+                        break;
+                default: snb_ax[i] = HORIZONTAL;
+                        snb_dy[i] = 0;
+                        snb_dx[i] = 1;
+                        break;
+              }
             }
           }
+          else findingNextMove = 0;
         }
-        if (change_axis == 1)
-        {
-          snb_ax[i] = HORIZONTAL;
-          snb_dy[i] = 0;
-          switch(k)
-          {
-            case 0: 
-              if ((snb_x[i] - p_x) > 0) snb_dx[i] = -1; 
-              if ((snb_x[i] - p_x) < 0) snb_dx[i] = 1; 
-              break;
-            case 1:
-              snb_dx[i] = -1;
-              break;
-           case 2:
-             snb_dx[i] = 1;
-             break;
-          }
-        }
-      }
-      else
-      {
-        if (snb_dx[i] == 0)
-        {
-          if ((snb_x[i] - p_x) > 0) snb_dx[i] = -1; 
-          if ((snb_x[i] - p_x) < 0) snb_dx[i] = 1;
-        } 
-        if (snb_x[i] == p_x) change_axis = 1;
         else
         {
-          if (map[snb_x[i]+snb_dx[i]][snb_y[i]] != 0)
+          if (snb_dx[i] == 0) snb_dx[i] = snb_dm[i]; // snobee was crashing cube
+          m = map[snb_x[i]+snb_dx[i]][snb_y[i]+snb_dy[i]];
+          if (m != 0)
           {
-            if ((map[snb_x[i]+snb_dx[i]][snb_y[i]] == ICE) && (k == 0))
+            if ((m == ICE) && (k == 0))
             {
               NewCubeCrashed(crsh_flag,crsh_x,crsh_y,snb_x[i]+snb_dx[i],snb_y[i]+snb_dy[i]);
+              snb_dm[i] = snb_dx[i]; // memorize direction
               snb_dx[i] = 0;
+              findingNextMove = 0;
             }
-            else 
+            else
             {
-              if (k == 2) snb_dx[i] = -snb_dx[i];
-              else change_axis = 1;
+              k = rand()%3;
+              switch(k)
+              {
+                case 0: snb_dx[i] = -snb_dx[i];
+                        break;
+                case 1: snb_ax[i] = VERTICAL;
+                        snb_dx[i] = 0;
+                        snb_dy[i] = -1;
+                        break;
+                default: snb_ax[i] = VERTICAL;
+                        snb_dx[i] = 0;
+                        snb_dy[i] = 1;
+                        break;
+              }
             }
           }
+          else findingNextMove = 0;
         }
-        if (change_axis == 1)
-        {
-          snb_ax[i] = VERTICAL;
-          snb_dx[i] = 0;
-          switch(k)
-          {
-            case 0: 
-              if ((snb_y[i] - p_y) > 0) snb_dy[i] = -1; 
-              if ((snb_y[i] - p_y) < 0) snb_dy[i] = 1; 
-              break;
-            case 1:
-              snb_dy[i] = -1;
-              break;
-            case 2:
-              snb_dy[i] = 1;
-              break;
-          }
-
-        }
-         
       }
       //
       //snb_dx[i] = snb_dy[i] = 0;
       //
     }
-    //printf("snb_dx = %d ; snb_dy = %d ; snb_ax = %d ; axis changed = %d ; state = %d \n", snb_dx[i],snb_dy[i],snb_ax[i],change_axis,snb_state[i]); 
+    printf("snb_x = %d ; snb_y = %d ; snb_dx = %d ; snb_dy = %d ; cell = %d ; snb_ax = %d ; state = %d \n", snb_x[i], snb_y[i], snb_dx[i],snb_dy[i],m,snb_ax[i],snb_state[i]); 
   }
 } 
 
