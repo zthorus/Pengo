@@ -437,6 +437,25 @@ int main(int argc, char **argv)
 
   CreateSprite(spr_pix,21,sprite_mem);
 
+  strcpy(spr_pix[0], "0000000000000000");
+  strcpy(spr_pix[1], "0000000000000000");
+  strcpy(spr_pix[2], "0000000000000000");
+  strcpy(spr_pix[3], "0000000000000000");
+  strcpy(spr_pix[4], "0000000400000000");
+  strcpy(spr_pix[5], "0000400400400000");
+  strcpy(spr_pix[6], "0000040404000000");
+  strcpy(spr_pix[7], "0000000000000000");
+  strcpy(spr_pix[8], "0004440000444000");
+  strcpy(spr_pix[9], "0000000000000000");
+  strcpy(spr_pix[10],"0000040404000000");
+  strcpy(spr_pix[11],"0000400400400000");
+  strcpy(spr_pix[12],"0000000400000000");
+  strcpy(spr_pix[13],"0000000000000000");
+  strcpy(spr_pix[14],"0000000000000000");
+  strcpy(spr_pix[15],"0000000000000000");
+
+  CreateSprite(spr_pix,22,sprite_mem);
+
   theLalEnv = new LalEnv(argc,argv);
   theLal = new Lal("Pengo",100,100);
   theLalEnv->AttachLal(theLal);
@@ -470,20 +489,20 @@ int main(int argc, char **argv)
   png_x = 8;
   png_y = 8;
 
-  snb_x[0] = 2;
-  snb_y[0] = 2;
+  snb_x[0] = 4;
+  snb_y[0] = 4;
   snb_ax[0] = VERTICAL;
   snb_dx[0] = 0;
   snb_dy[0] = 1;
   snb_state[0] = ACTIVE;
-  snb_x[1] = 12;
-  snb_y[1] = 2;
+  snb_x[1] = 10;
+  snb_y[1] = 4;
   snb_ax[1] = HORIZONTAL;
   snb_dx[1] = -1;
   snb_dy[1] = 0;
   snb_state[1] = ACTIVE;
-  snb_x[2] = 12;
-  snb_y[2] = 12;
+  snb_x[2] = 10;
+  snb_y[2] = 10;
   snb_ax[2] = VERTICAL;
   snb_dx[2] = 0;
   snb_dy[2] = -1;
@@ -613,6 +632,7 @@ int main(int argc, char **argv)
               }
             } 
             // check if Snobee half-way in front of cube => pushed or crashed
+            
             if (i == 8)
               CheckSnobeePushed(map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy);
           }
@@ -629,6 +649,7 @@ int main(int argc, char **argv)
         {
           xc = crsh_x[j];
           yc = crsh_y[j];
+          printf("crashing cube %d at (%d ; %d)\n", j,xc,yc);
           k= i/4;
           if (k != 4) PutSprite(pixmap,sprite_mem,14+k,xc*16-W_BRDR,yc*16-W_BRDR);
           else // if i == 16 (end of animation loop)
@@ -657,11 +678,12 @@ int main(int argc, char **argv)
             break;
 
           case PUSHED:
-            PutSprite(pixmap,sprite_mem,18,snb_x[j]*16+2*snb_dx[j]*i-W_BRDR,snb_y[j]*16+2*snb_dy[j]*i-W_BRDR);
+            k = i%8; 
+            PutSprite(pixmap,sprite_mem,18,snb_x[j]*16+2*snb_dx[j]*k-W_BRDR,snb_y[j]*16+2*snb_dy[j]*k-W_BRDR);
             break;
 
           case CRUSHED:
-            PutSprite(pixmap,sprite_mem,18,snb_x[j]*16-W_BRDR,snb_y[j]*16-W_BRDR);
+            PutSprite(pixmap,sprite_mem,22,snb_x[j]*16-W_BRDR,snb_y[j]*16-W_BRDR);
             break;
         }
       } 
@@ -705,6 +727,7 @@ void MovePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_
       if (map[png_x+2*png_dx][png_y+2*png_dy] == 0)
       {
         p_state = PUSHING;
+        printf("pushing \n");
       }
       else
       {
@@ -713,6 +736,7 @@ void MovePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_
         {
           case ICE:
             p_state = CRASHING;
+            printf("pushing \n");
             break;
           case DIAMOND: 
             p_state = IDLE;
@@ -785,6 +809,7 @@ void CheckSnobeePushed(int **map,int *snb_x,int *snb_y,int *snb_dx,int *snb_dy,i
               ((psh_y[i]+psh_dy[i]) == snb_y[j]))
 
           {
+            printf("-- cube: (%d ; %d) - snobee (%d ; %d) \n",psh_x[i],psh_y[i],snb_x[j],snb_y[j]); 
             if (map[psh_x[i]+2*psh_dx[i]][psh_y[i]+2*psh_dy[i]] != 0)
             {
               snb_state[j] = CRUSHED;
@@ -801,7 +826,8 @@ void CheckSnobeePushed(int **map,int *snb_x,int *snb_y,int *snb_dx,int *snb_dy,i
           // look if snobee is about to cross a pushed cube
           // (can also be half-way).  If so, consider it doomed 
           if (((psh_x[i]+psh_dx[i]) == (snb_x[j]+snb_dx[j])) &&
-              ((psh_y[i]+psh_dy[i]) == (snb_y[j]+snb_dy[j])))
+              ((psh_y[i]+psh_dy[i]) == (snb_y[j]+snb_dy[j])) &&
+              (snb_state[j] == ACTIVE))
           {
             if (map[psh_x[i]+2*psh_dx[i]][psh_y[i]+2*psh_dy[i]] != 0)
             {
@@ -817,7 +843,7 @@ void CheckSnobeePushed(int **map,int *snb_x,int *snb_y,int *snb_dx,int *snb_dy,i
             }
             // force snobee to be in front of pushed cube
             snb_x[j] += snb_dx[j];
-            snb_x[j] += snb_dx[j];
+            snb_y[j] += snb_dy[j];
           } 
         }
       }
@@ -904,8 +930,19 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
         {
           snb_ax[i] = HORIZONTAL;
           snb_dy[i] = 0;
-          if ((snb_x[i] - p_x) > 0) snb_dx[i] = -1; 
-          if ((snb_x[i] - p_x) < 0) snb_dx[i] = 1; 
+          switch(k)
+          {
+            case 0: 
+              if ((snb_x[i] - p_x) > 0) snb_dx[i] = -1; 
+              if ((snb_x[i] - p_x) < 0) snb_dx[i] = 1; 
+              break;
+            case 1:
+              snb_dx[i] = -1;
+              break;
+           case 2:
+             snb_dx[i] = 1;
+             break;
+          }
         }
       }
       else
@@ -936,14 +973,28 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
         {
           snb_ax[i] = VERTICAL;
           snb_dx[i] = 0;
-          if ((snb_y[i] - p_y) > 0) snb_dy[i] = -1; 
-          if ((snb_y[i] - p_y) < 0) snb_dy[i] = 1; 
+          switch(k)
+          {
+            case 0: 
+              if ((snb_y[i] - p_y) > 0) snb_dy[i] = -1; 
+              if ((snb_y[i] - p_y) < 0) snb_dy[i] = 1; 
+              break;
+            case 1:
+              snb_dy[i] = -1;
+              break;
+            case 2:
+              snb_dy[i] = 1;
+              break;
+          }
+
         }
          
       }
-      snb_dx[i] = snb_dy[i] = 0;
+      //
+      //snb_dx[i] = snb_dy[i] = 0;
+      //
     }
-    printf("snb_dx = %d ; snb_dy = %d ; snb_ax = %d ; axis changed = %d\n", snb_dx[i],snb_dy[i],snb_ax[i],change_axis); 
+    //printf("snb_dx = %d ; snb_dy = %d ; snb_ax = %d ; axis changed = %d ; state = %d \n", snb_dx[i],snb_dy[i],snb_ax[i],change_axis,snb_state[i]); 
   }
 } 
 
@@ -1112,8 +1163,8 @@ void CreateMap(int **map)
     d = 0;
     while (d == 0)
     {
-      x = 2*(rand()%((X_MAP-3)/2))+3;
-      y = 2*(rand()%((Y_MAP-3)/2))+3;
+      x = 2*(rand()%((X_MAP-5)/2))+3;
+      y = 2*(rand()%((Y_MAP-5)/2))+3;
       if (map[x][y] == ICE)
       {
          map[x][y] = DIAMOND;
