@@ -26,11 +26,11 @@
 
 // Snobee states
 #define ACTIVE 0
-#define REBIRTH 3
-#define DEAD 6
-#define PUSHED 7
-#define CRUSHED 8
-#define SHOCKED -9
+#define REBIRTH 9
+#define DEAD 10 
+#define PUSHED 70
+#define CRUSHED 80
+#define SHOCKED -10
 
 #define MAX_PUSH 10
 #define MAX_CRASH 10
@@ -39,7 +39,7 @@
 #define HORIZONTAL 0
 #define VERTICAL   1
 
-#define NB_SPRITES 24 
+#define NB_SPRITES 32 
 
 void MovePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_state, int elec_cnt);
 
@@ -64,6 +64,7 @@ void CreateSprite(char **spr_pix,int sprite_num,unsigned char *sprite_mem);
 void PutSprite(unsigned char **pixmap,unsigned char *sprite_mem, int sprite_num, int x, int y);
 
 void EraseSprite(unsigned char **pixmap,int x,int y);
+
 
 int main(int argc, char **argv)
 {
@@ -111,10 +112,11 @@ int main(int argc, char **argv)
   int i,j,k,l;
   int key;
   int running;
+  int x,y;
   int xc,yc;
   int dxc,dyc;
   int ct;
-
+  int done;
   
   pixmap = (unsigned char **)malloc(pmx*sizeof(unsigned char *));
   if (pixmap == NULL)
@@ -136,11 +138,11 @@ int main(int argc, char **argv)
       for (j = 0; j < (pmy-1); j++) pixmap[i][j] = 208;
     }
   }
-  // last line of pixmap = 0 and 255 to use full color LUT 
+  // last line of pixmap = 0 and 254 to use full color LUT 
   for (i = 0 ; i < pmx ; i+=2)
   {
-     pixmap[i][pmy] = 0;
-     pixmap[i+1][pmy] = 255;
+     pixmap[i][pmy-1] = 0;
+     pixmap[i+1][pmy-1] = 254;
   }
   
   spr_pix = (char **)malloc(16*sizeof(char *));
@@ -459,6 +461,32 @@ int main(int argc, char **argv)
 
   CreateSprite(spr_pix,22,sprite_mem);
 
+  strcpy(spr_pix[4], "0000000000000000");
+  strcpy(spr_pix[5], "0000066666600000");
+  strcpy(spr_pix[6], "0006666666666000");
+  strcpy(spr_pix[7], "0066662662666600");
+  strcpy(spr_pix[8], "0666669669666660");
+  strcpy(spr_pix[9], "6666666666666666");
+  strcpy(spr_pix[10],"6666666666666666");
+  strcpy(spr_pix[11],"0666666666666660");
+  strcpy(spr_pix[12],"0000000000000000");
+  strcpy(spr_pix[13],"0000000000000000");
+  strcpy(spr_pix[14],"0000000000000000");
+  strcpy(spr_pix[15],"0000000000000000");
+
+  CreateSprite(spr_pix,23,sprite_mem);
+
+  strcpy(spr_pix[4], "0000000660000000");
+  strcpy(spr_pix[5], "0000006666000000");
+  strcpy(spr_pix[6], "0000066666600000");
+  strcpy(spr_pix[7], "0000066666600000");
+  strcpy(spr_pix[8], "0000066666600000");
+  strcpy(spr_pix[9], "0000066666600000");
+  strcpy(spr_pix[10],"0000006666000000");
+  strcpy(spr_pix[11],"0000000660000000");
+
+  CreateSprite(spr_pix,24,sprite_mem);
+
   theLalEnv = new LalEnv(argc,argv);
   theLal = new Lal("Pengo",100,100);
   theLalEnv->AttachLal(theLal);
@@ -498,19 +526,19 @@ int main(int argc, char **argv)
   snb_ax[0] = VERTICAL;
   snb_dx[0] = 0;
   snb_dy[0] = 1;
-  snb_state[0] = ACTIVE;
+  snb_state[0] = REBIRTH;
   snb_x[1] = 10;
   snb_y[1] = 2;
   snb_ax[1] = HORIZONTAL;
   snb_dx[1] = 1;
   snb_dy[1] = 0;
-  snb_state[1] = ACTIVE;
+  snb_state[1] = REBIRTH;
   snb_x[2] = 2;
   snb_y[2] = 14;
   snb_ax[2] = VERTICAL;
   snb_dx[2] = 0;
   snb_dy[2] = -1;
-  snb_state[2] = ACTIVE;
+  snb_state[2] = REBIRTH;
 
   elec_cnt = 0;
   for (i = 0 ; i < MAX_PUSH ; i++) psh_flag[i] = 0;
@@ -579,6 +607,7 @@ int main(int argc, char **argv)
       png_dx = 0;
       png_dy = 0;
     }
+
     MoveSnobees(map,snb_state,snb_x,snb_y,snb_dx,snb_dy,snb_dm,snb_ax,png_x,png_y,crsh_flag,crsh_x,crsh_y);
     CheckSnobeePushed(pixmap,map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy,0);
     printf("snobee motion OK\n");
@@ -621,7 +650,22 @@ int main(int argc, char **argv)
               for (l = 0 ; l < NB_SNOBEE ; l++)
               {
                 if ((snb_state[l] == CRUSHED) && (snb_x[l] == xc+dxc) && (snb_y[l] == yc+dyc))
+                {
                   snb_state[l] = DEAD;
+                  // generating new snobee coordinates for rebirth
+                  done = 0;
+                  while (!done)
+                  {
+                    x = rand()%(X_MAP-2)+1;
+                    y = rand()%(Y_MAP-2)+1;
+                    if (map[x][y] == 0)
+                    {
+                      snb_x[j] = x;
+                      snb_y[j] = y;
+                      done = 1;
+                    }
+                  }
+                }
               }
             }
             psh_x[j] += dxc;
@@ -689,8 +733,18 @@ int main(int argc, char **argv)
             break;
 
           case CRUSHED:
-            PutSprite(pixmap,sprite_mem,22,snb_x[j]*16-W_BRDR,snb_y[j]*16-W_BRDR);
+            if (i == 1) PutSprite(pixmap,sprite_mem,22,snb_x[j]*16-W_BRDR,snb_y[j]*16-W_BRDR);
+            if (i == 2) EraseSprite(pixmap,snb_x[j]*16-W_BRDR,snb_y[j]*16-W_BRDR);
             break;
+
+          case REBIRTH:
+            PutSprite(pixmap,sprite_mem,24,snb_x[j]*16-W_BRDR,snb_y[j]*16-W_BRDR);
+            break;
+
+          case SHOCKED:
+            PutSprite(pixmap,sprite_mem,23,snb_x[j]*16-W_BRDR,snb_y[j]*16-W_BRDR);
+            break;
+            
         }
       } 
       theLal->Update();
@@ -706,6 +760,14 @@ int main(int argc, char **argv)
         snb_x[j] += snb_dx[j];
         snb_y[j] += snb_dy[j];
       }
+    }
+    // update non-active Snobee states
+    for (i = 0 ; i < NB_SNOBEE ; i++)
+    {
+      // shocked
+      if (snb_state[i] < ACTIVE) snb_state[i]++;
+      // dead
+      if ((snb_state[i] <= DEAD) && (snb_state[i] > ACTIVE)) snb_state[i]--;
     }
   }
   
@@ -837,6 +899,11 @@ void CheckSnobeePushed(unsigned char **pixmap,int **map,int *snb_x,int *snb_y,in
                 ((psh_y[i]+psh_dy[i]) == (snb_y[j]+snb_dy[j])) &&
                 (snb_state[j] == ACTIVE))
             {
+              // "teleport" snobee to be in front of pushed cube
+              EraseSprite(pixmap,16*snb_x[j]+8*halfway*snb_dx[j]-W_BRDR,16*snb_y[j]+8*halfway*snb_dy[j]-W_BRDR);
+              snb_x[j] += snb_dx[j];
+              snb_y[j] += snb_dy[j];
+
               if (map[psh_x[i]+2*psh_dx[i]][psh_y[i]+2*psh_dy[i]] != 0)
               {
                 snb_state[j] = CRUSHED;
@@ -849,12 +916,6 @@ void CheckSnobeePushed(unsigned char **pixmap,int **map,int *snb_x,int *snb_y,in
                 snb_dx[j] = psh_dx[i];
                 snb_dy[j] = psh_dy[i];
               }
-
-              // "teleport" snobee to be in front of pushed cube
-              EraseSprite(pixmap,16*snb_x[j]+8*halfway*snb_dx[j]-W_BRDR,16*snb_y[j]+8*halfway*snb_dy[j]-W_BRDR);
-              // force snobee to be in front of pushed cube
-              snb_x[j] += snb_dx[j];
-              snb_y[j] += snb_dy[j];
             }
           } 
         }
@@ -867,6 +928,8 @@ void CheckSnobeePushed(unsigned char **pixmap,int **map,int *snb_x,int *snb_y,in
 void CheckCubeStopped(int **map,int *snb_x,int *snb_y,int *snb_state,int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy)
 {
   int i,j;
+  int x,y;
+  int done;
 
   for (i = 0 ; i < MAX_PUSH; i++)
   {
@@ -878,9 +941,22 @@ void CheckCubeStopped(int **map,int *snb_x,int *snb_y,int *snb_state,int *psh_fl
       for (j = 0; j < NB_SNOBEE ; j++)
       {
         if ((snb_state[j] == CRUSHED) && (snb_x[j] == psh_x[i]) &&
-         (snb_y[j] == psh_y[i]))
+            (snb_y[j] == psh_y[i]))
         {
-            snb_state[j] = DEAD;
+          snb_state[j] = DEAD;
+          // generating new snobee coordinates for rebirth
+          done = 0;
+          while (!done)
+          {
+            x = rand()%(X_MAP-2)+1;
+            y = rand()%(Y_MAP-2)+1;
+            if (map[x][y] == 0)
+            {
+              snb_x[j] = x;
+              snb_y[j] = y;
+              done = 1;
+            }
+          }
         }
       }
     }
