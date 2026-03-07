@@ -17,7 +17,6 @@
 #define DIAMOND 2
 #define BORDER 3
 #define W_BRDR 8
-#define NB_GATES 80
 
 // Pengo states
 #define IDLE 0
@@ -32,7 +31,7 @@
 #define DEAD 10 
 #define PUSHED 70
 #define CRUSHED 80
-#define SHOCKED -10
+#define SHOCKED -6
 
 #define MAX_PUSH 10
 #define MAX_CRASH 10
@@ -124,6 +123,7 @@ int main(int argc, char **argv)
   int playing;
   int killed;
   int gameOver;
+  int completed;
   int lives;
   int score;
   int x,y;
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
     else
     {
       // fill pixmap with cyan (background color)
-      for (j = 0; j < (pmy-1); j++) pixmap[i][j] = 208;
+      for (j = 0; j < (pmy-1); j++) pixmap[i][j] = 254; //208;
     }
   }
   // last line of pixmap = 0 and 254 to use full color LUT 
@@ -543,13 +543,14 @@ int main(int argc, char **argv)
     gameOver = 0;
     lives = 3;
     score = 0;
+    completed = 0;
 
     while (!gameOver)
     { 
       // Clear pixmap with background color 
       for (i = 0 ; i < pmx ; i++)
       { 
-        for (j = 0; j < (pmy-1); j++) pixmap[i][j] = 208;
+        for (j = 0; j < (pmy-1); j++) pixmap[i][j] = 254; //208;
       }
       for (i = 1; i < (X_MAP-1) ; i++)
       {
@@ -561,8 +562,8 @@ int main(int argc, char **argv)
       }
       DisplayBorder(pixmap,pmx,pmy,180);
 
-      png_x = 8;
-      png_y = 8;
+      png_x = 6;
+      png_y = 7;
       killed = 0;
 
       // Check Pengo location is not occupied by a diamond
@@ -584,20 +585,20 @@ int main(int argc, char **argv)
         }
       }
 
-      snb_x[0] = 2;
-      snb_y[0] = 2;
+      snb_x[0] = 3;
+      snb_y[0] = 3;
       snb_ax[0] = VERTICAL;
       snb_dx[0] = 0;
       snb_dy[0] = 1;
       snb_state[0] = REBIRTH;
-      snb_x[1] = 10;
-      snb_y[1] = 2;
+      snb_x[1] = 11;
+      snb_y[1] = 3;
       snb_ax[1] = HORIZONTAL;
       snb_dx[1] = 1;
       snb_dy[1] = 0;
       snb_state[1] = REBIRTH;
-      snb_x[2] = 2;
-      snb_y[2] = 14;
+      snb_x[2] = 3;
+      snb_y[2] = 13;
       snb_ax[2] = VERTICAL;
       snb_dx[2] = 0;
       snb_dy[2] = -1;
@@ -639,6 +640,15 @@ int main(int argc, char **argv)
       playing=1;
       while(playing)
       {
+        /*
+        for (j= 0; j < Y_MAP ; j++)
+        {
+          for (i = 0 ; i < X_MAP ; i++) printf("%d",map[i][j]);
+          printf("\n");
+        }
+        printf("\n\n");
+        */
+
         png_dx = 0;
         png_dy = 0;
         key = theLal->GetTheKeyNoBlock();
@@ -698,10 +708,12 @@ int main(int argc, char **argv)
           elec_cnt = 15;
           for (i = 0 ; i < NB_SNOBEE ; i++)
           {
-            if ((png_x == 1) && (snb_x[i] == 1)) snb_state[i] = SHOCKED;
-            if ((png_x == (X_MAP-2)) && (snb_x[i] == (X_MAP-2))) snb_state[i] = SHOCKED;
-            if ((png_y == 1) && (snb_y[i] == 1)) snb_state[i] = SHOCKED;
-            if ((png_y == (Y_MAP-2)) && (snb_y[i] == (Y_MAP-2))) snb_state[i] = SHOCKED;
+            if ((snb_state[i] == ACTIVE) && ((snb_x[i] == 1)
+                || (snb_x[i] == (X_MAP-2)) || (snb_y[i] == 1) ||
+                   (snb_y[i] == (Y_MAP -2))))
+              {
+                snb_state[i] = SHOCKED;
+              }
           }
         }
         MoveSnobees(map,snb_state,snb_x,snb_y,snb_dx,snb_dy,snb_dm,snb_ax,png_x,png_y,crsh_flag,crsh_x,crsh_y);
@@ -711,14 +723,14 @@ int main(int argc, char **argv)
 
         for (i = 1 ; i <= 16 ; i++)
         {
-           // 1) pengo
+           // 1) Pengo
 
           if (png_state == MOVING)
           {
-            PutSprite(pixmap,sprite_mem,png_spr+(i%2),png_x*16+png_dx*i,png_y*16+png_dy*i);
+            PutSprite(pixmap,sprite_mem,png_spr+((i/2)%2),png_x*16+png_dx*i,png_y*16+png_dy*i);
           }
 
-          // 2) pushed cubes and snobees (moving twice faster than other
+          // 2) Pushed cubes and snobees (moving twice faster than other
           //    sprites), if any
 
           for (j = 0 ; j < MAX_PUSH ; j++)
@@ -733,10 +745,10 @@ int main(int argc, char **argv)
               k = i%8;
               if ((i == 8) || (i == 16))
               {
-                // cube has moved from cell
+                // Cube has moved from cell
                 map[xc][yc] = 0;
                 map[xc+dxc][yc+dyc] = ct;
-                // check if cube can still move
+                // Check if cube can still move
                 if (map[xc+2*dxc][yc+2*dyc] != 0)
                 {
                   psh_flag[j] = 0;
@@ -768,9 +780,43 @@ int main(int argc, char **argv)
             
                 if (i == 8)
                   CheckSnobeePushed(pixmap,map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy,1);
+
+                // Check if diamonds are grouped and aligned
+                printf("check diamond alignment...\n");
+                if ((psh_flag[j] == 0) && (ct == DIAMOND))
+                {
+                  if (xc < (X_MAP - 2))
+                  {
+                    if ((map[xc+1][yc] == DIAMOND) && (map[xc+2][yc] == DIAMOND))
+                      completed = 1;
+                  }
+                  if ((map[xc+1][yc] == DIAMOND) && (map[xc-1][yc] == DIAMOND))
+                    completed = 1;
+                  if (xc > 1)
+                  {
+                    if  ((map[xc-2][yc] == DIAMOND) && (map[xc-1][yc] == DIAMOND))
+                      completed = 1;
+                  }
+                  if (yc < (Y_MAP - 2))
+                  {
+                    if ((map[xc][yc+1] == DIAMOND) && (map[xc][yc+2] == DIAMOND))
+                    completed = 1;
+                  }
+                  if ((map[xc][yc+1] == DIAMOND) && (map[xc][yc-1] == DIAMOND))
+                    completed = 1;
+                  if (yc > 1)
+                  {
+                    if  ((map[xc][yc-2] == DIAMOND) && (map[xc][yc-1] == DIAMOND))
+                    completed = 1;
+                  }
+                  if (completed == 1) playing = 0;
+                }
+                printf("Done\n");  
               }
+              printf("Moving pushed cube sprite\n");
               EraseSprite(pixmap,xc*16+2*dxc*(k-1),yc*16+2*dyc*(k-1));
               PutSprite(pixmap,sprite_mem,ct-1,xc*16+2*dxc*k,yc*16+2*dyc*k);
+              printf("Done\n");  
             }
           }
 
@@ -851,8 +897,9 @@ int main(int argc, char **argv)
                   EraseSprite(pixmap,16*png_x+8*png_dx,16*png_y+8*png_dy);
                   //PutSprite(pixmap,sprite_mem,25,png_x*16+8*png_dx,png_y*16+8*png_dy);
                   killed = 1;
+                  printf("Killed at half-way\n");
                   playing = 0;
-                  i == 17;     // Stop animation immediately
+                  i = 17;     // Stop animation immediately
                 }
               }
             }
@@ -862,7 +909,8 @@ int main(int argc, char **argv)
         }
         // End of animation loop
       
-        // update player coordinates on map 
+        // Update Pengo and Snobee coordinates on map 
+
         png_x+=png_dx;
         png_y+=png_dy;
         for (j = 0 ; j < NB_SNOBEE ; j++)
@@ -873,6 +921,7 @@ int main(int argc, char **argv)
             snb_y[j] += snb_dy[j];
           }
         }
+
         // Check if Pengo and a Snobee touch each other
         for (i = 0 ; i < NB_SNOBEE ; i++)
         {
@@ -883,14 +932,16 @@ int main(int argc, char **argv)
               killed = 1;
               playing = 0;
             }
-            if (snb_state[i] == SHOCKED)
+            if ((snb_state[i] >= SHOCKED) && (snb_state[i] < ACTIVE))
             {
+              printf("Killed shocked snobee !\n");
               snb_state[i] = DEAD;
               score += 100;
               printf("Score: %d\n", score);
             }
           }
         }
+
         // Generate new coordinates for rebirth of dead snobees
         for (i = 0 ; i < NB_SNOBEE ; i++)
         {
@@ -910,6 +961,7 @@ int main(int argc, char **argv)
             }
           }
         }
+
         // Update non-active Snobee states
         for (i = 0 ; i < NB_SNOBEE ; i++)
         {
@@ -921,7 +973,7 @@ int main(int argc, char **argv)
         // "Cock" the electric border if it has been triggered
         if (elec_cnt > 0) elec_cnt--; 
       }
-      // End of main loop of game
+      // End of main loop of game (while playing)
   
       if (killed)
       {
@@ -932,6 +984,13 @@ int main(int argc, char **argv)
         printf("%d lives remaining\n", lives);
         if (lives == 0) gameOver = 1;
         usleep(1000000);
+      }
+      if (completed)
+      {
+        score+=10000;
+        printf("Level completed !\n");
+        CreateMap(map);
+        completed = 0;
       }
       if (quit) 
       {
@@ -1159,19 +1218,41 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
               {
                 case 0: snb_dy[i] = -snb_dy[i];
                         break;
-                case 1: 
-                case 2: snb_ax[i] = HORIZONTAL;
+                case 1: snb_ax[i] = HORIZONTAL;
                         snb_dy[i] = 0;
                         snb_dx[i] = -1;
                         break;
-                default: snb_ax[i] = HORIZONTAL;
+                case 2: snb_ax[i] = HORIZONTAL;
                         snb_dy[i] = 0;
                         snb_dx[i] = 1;
                         break;
+                default: snb_ax[i] = HORIZONTAL;
+                        snb_dy[i] = 0;
+                        if (snb_dx[i] < p_x) snb_dx[i] = 1;
+                        else snb_dx[i] = -1;
+                        break; 
               }
             }
           }
-          else findingNextMove = 0;
+          else
+          {
+            k = rand()%3;
+            if ((k == 0) && (map[snb_x[i]+1][snb_y[i]] == 0) 
+                && (snb_x[i] < p_x)) 
+            {
+              snb_ax[i] = HORIZONTAL;
+              snb_dy[i] = 0;
+              snb_dx[i] = 1;
+            }
+            if ((k == 0) && (map[snb_x[i]-1][snb_y[i]] == 0) 
+                && (snb_x[i] > p_x)) 
+            {
+              snb_ax[i] = HORIZONTAL;
+              snb_dy[i] = 0;
+              snb_dx[i] = -1;
+            }
+            findingNextMove = 0;
+          }
         }
         else
         {
@@ -1193,19 +1274,41 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
               {
                 case 0: snb_dx[i] = -snb_dx[i];
                         break;
-                case 1: 
-                case 2: snb_ax[i] = VERTICAL;
+                case 1: snb_ax[i] = VERTICAL;
                         snb_dx[i] = 0;
                         snb_dy[i] = -1;
                         break;
-                default: snb_ax[i] = VERTICAL;
+                case 2: snb_ax[i] = VERTICAL;
                         snb_dx[i] = 0;
                         snb_dy[i] = 1;
                         break;
+                default: snb_ax[i] = VERTICAL;
+                        snb_dx[i] = 0;
+                        if (snb_dy[i] < p_y) snb_dy[i] = 1;
+                        else snb_dy[i] = -1;
+                        break; 
               }
             }
           }
-          else findingNextMove = 0;
+          else
+          {
+            k = rand()%3;
+            if ((k == 0) && (map[snb_x[i]][snb_y[i]+1] == 0)
+                && (snb_y[i] < p_y)) 
+            {
+              snb_ax[i] = VERTICAL;
+              snb_dy[i] = 1;
+              snb_dx[i] = 0;
+            }
+            if ((k == 0) && (map[snb_x[i]][snb_y[i]-1] == 0) 
+                && (snb_x[i] > p_x)) 
+            {
+              snb_ax[i] = VERTICAL;
+              snb_dy[i] = -1;
+              snb_dx[i] = 0;
+            }
+            findingNextMove = 0;
+          }
         }
       }
       //
@@ -1263,14 +1366,14 @@ void CreateMap(int **map)
 
   // create a grid of ice cubes
 
-  for (i = 1 ; i < (X_MAP-1) ; i+=2)
+  for (i = 2 ; i < (X_MAP-1) ; i+=2)  // i = 1
   {
     for (j = 1 ; j < (Y_MAP-1) ; j++)
     {
       map[i][j] = ICE;
     }
   }
-  for (j = 1 ; j < (Y_MAP-1) ; j+=2)
+  for (j = 2 ; j < (Y_MAP-1) ; j+=2)
   {
     for (i = 1 ; i < (X_MAP-1) ; i++)
     {
@@ -1280,8 +1383,10 @@ void CreateMap(int **map)
 
   // create a "maze" = random paths between the cells of the grid
 
-  xc = (X_MAP-3)/2;
-  yc = (Y_MAP-3)/2;
+  // Number of cells along x and y
+
+  xc = (X_MAP-1)/2;  // X_MAP-3
+  yc = (Y_MAP-1)/2;
 
   // create array of visited cells (visited by the maze generator algorithm) 
 
@@ -1304,15 +1409,16 @@ void CreateMap(int **map)
 
   // first visited cell = at the center
   nv = 1;
-  x = xc/2;
-  y = yc/2;
+  x = xc/2 + 1; // + 0
+  y = yc/2 + 1;
   v[x][y] = 1;
 
   nc = xc*yc;
   sp = 0;
   t = 0;
 
-  // visit all the cells (if it doesn´t take too long) 
+  // visit all the cells of the grid  (if it doesn´t take too long)
+ 
   while (nv < nc)
   {
     nn = 0;
@@ -1357,7 +1463,7 @@ void CreateMap(int **map)
       sp++;
       sx[sp] = x;
       sy[sp] = y;
-      map[x+cx[k]+2][y+cy[k]+2] = 0;
+      map[x+cx[k]+1][y+cy[k]+1] = 0; // +2
       x = cx[k];
       y = cy[k];
       v[x][y] = 1;
@@ -1377,8 +1483,8 @@ void CreateMap(int **map)
     d = 0;
     while (d == 0)
     {
-      x = 2*(rand()%((X_MAP-5)/2))+3;
-      y = 2*(rand()%((Y_MAP-5)/2))+3;
+      x = 2*(rand()%((X_MAP-5)/2))+2; // +3  
+      y = 2*(rand()%((Y_MAP-5)/2))+2;
       if (map[x][y] == ICE)
       {
          map[x][y] = DIAMOND;
@@ -1428,7 +1534,7 @@ void CreateSprite(char **spr_pix,int sprite_num,unsigned char *sprite_mem)
   int i,j;
   int a,n;
   unsigned char LUT[10];
-  LUT[0] = 208 ; //cyan
+  LUT[0] = 254; //208 ; //cyan
   LUT[1] = 237;  // blue
   LUT[2] = 212 ; // light cyan
   LUT[3] = 178 ; // green 
@@ -1483,7 +1589,7 @@ void EraseSprite(unsigned char **pixmap,int x,int y)
   {
     for (i = 0 ; i < 16 ; i++)
     {
-      pixmap[x+i-W_BRDR][y+j-W_BRDR] = 208;
+      pixmap[x+i-W_BRDR][y+j-W_BRDR] = 254; //208;
     }
   }
 }
