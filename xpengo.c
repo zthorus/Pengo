@@ -102,8 +102,10 @@ int main(int argc, char **argv)
 
   // "Virtual" pixmap size (actual pixmap is displayed with a x3 zoom factor) 
   int pmx = (X_MAP-2)*16 + 2*W_BRDR;
-  int pmy = (Y_MAP-2)*16 + 2*W_BRDR + 1;
-  int xw,yw;
+  int pmy = (Y_MAP-2)*16 + 2*W_BRDR;
+  // Actual pixmap size
+  int xw = 3*pmx;
+  int yw = 3*pmy;
  
   int **map;
 
@@ -232,7 +234,7 @@ int main(int argc, char **argv)
  
   strcpy(spr_pix[1], "0000004444000000");
   strcpy(spr_pix[2], "0000044444400000");
-  strcpy(spr_pix[3], "0000442442440000");
+  strcpy(spr_pix[3], "0000448448440000");
   strcpy(spr_pix[4], "0000449449440000");
   strcpy(spr_pix[5], "0004444444444000");
   strcpy(spr_pix[6], "0044445555444400");
@@ -298,7 +300,7 @@ int main(int argc, char **argv)
 
   strcpy(spr_pix[1], "0000004444000000");
   strcpy(spr_pix[2], "0000044444400000");
-  strcpy(spr_pix[3], "0000024444440000");
+  strcpy(spr_pix[3], "0000084444440000");
   strcpy(spr_pix[4], "0000094444440000");
   strcpy(spr_pix[5], "0000044444444000");
   strcpy(spr_pix[6], "0000554744474000");
@@ -332,7 +334,7 @@ int main(int argc, char **argv)
 
   strcpy(spr_pix[1], "0000004444000000");
   strcpy(spr_pix[2], "0000044444400000");
-  strcpy(spr_pix[3], "0000444444200000");
+  strcpy(spr_pix[3], "0000444444800000");
   strcpy(spr_pix[4], "0000444444900000");
   strcpy(spr_pix[5], "0004444444400000");
   strcpy(spr_pix[6], "0004744474550000");
@@ -409,7 +411,7 @@ int main(int argc, char **argv)
   strcpy(spr_pix[2], "0000006666000000");
   strcpy(spr_pix[3], "0000066666600000");
   strcpy(spr_pix[4], "0000666666660000");
-  strcpy(spr_pix[5], "0006662662666000");
+  strcpy(spr_pix[5], "0006668668666000");
   strcpy(spr_pix[6], "0006669669666000");
   strcpy(spr_pix[7], "0066666666666600");
   strcpy(spr_pix[8], "0066666556666600");
@@ -430,7 +432,7 @@ int main(int argc, char **argv)
   CreateSprite(spr_pix,19,sprite_mem);
 
   strcpy(spr_pix[4], "0000666666600000");
-  strcpy(spr_pix[5], "0006666666620000");
+  strcpy(spr_pix[5], "0006666666680000");
   strcpy(spr_pix[6], "0006666666690000");
   strcpy(spr_pix[7], "0066666666660000");
   strcpy(spr_pix[8], "0066666666655500");
@@ -442,7 +444,7 @@ int main(int argc, char **argv)
 
   CreateSprite(spr_pix,20,sprite_mem);
 
-  strcpy(spr_pix[5], "0000266666666000");
+  strcpy(spr_pix[5], "0000866666666000");
   strcpy(spr_pix[6], "0000966666666000");
   strcpy(spr_pix[7], "0000666666666600");
   strcpy(spr_pix[8], "0055566666666600");
@@ -476,7 +478,7 @@ int main(int argc, char **argv)
   strcpy(spr_pix[4], "0000000000000000");
   strcpy(spr_pix[5], "0000066666600000");
   strcpy(spr_pix[6], "0006666666666000");
-  strcpy(spr_pix[7], "0066662662666600");
+  strcpy(spr_pix[7], "0066668668666600");
   strcpy(spr_pix[8], "0666669669666660");
   strcpy(spr_pix[9], "6666666666666666");
   strcpy(spr_pix[10],"6666666666666666");
@@ -504,18 +506,18 @@ int main(int argc, char **argv)
   strcpy(spr_pix[2], "0000006666000000");
   strcpy(spr_pix[3], "0000066666600000");
   strcpy(spr_pix[4], "0000666666660000");
-  strcpy(spr_pix[5], "0006662662666000");
+  strcpy(spr_pix[5], "0006668668666000");
   strcpy(spr_pix[6], "0006669669666000");
   strcpy(spr_pix[7], "0066666566666600");
   strcpy(spr_pix[8], "0066665566666600");
   strcpy(spr_pix[9], "0064745544446600");
-  strcpy(spr_pix[9], "0044744444444000");
-  strcpy(spr_pix[10],"0444444444444000");
-  strcpy(spr_pix[11],"0444444444444005");
+  strcpy(spr_pix[10],"0044744444444000");
+  strcpy(spr_pix[11],"0444444444444000");
   strcpy(spr_pix[12],"0444444444444005");
-  strcpy(spr_pix[13],"0444444444444555");
-  strcpy(spr_pix[14],"0000000000000000");
-  strcpy(spr_pix[15],"0000000000000000");
+  strcpy(spr_pix[13],"0444444444444005");
+  strcpy(spr_pix[14],"0444444444444555");
+  strcpy(spr_pix[15],"0044444444444000");
+ // strcpy(spr_pix[15],"0000000000000000");
 
   CreateSprite(spr_pix,25,sprite_mem);
 
@@ -534,9 +536,6 @@ int main(int argc, char **argv)
 
   // Create the window 
      
-  xw = 3*(2*W_BRDR+16*(X_MAP-2));
-  yw = 3*(2*W_BRDR+16*(Y_MAP-2));
- 
   win = XCreateSimpleWindow(display,RootWindow(display,screen),100,100,xw,yw,4,BlackPixel(display,screen),WhitePixel(display,screen));
   sizeHints.flags = PPosition|PSize;
   sizeHints.x = 100;
@@ -554,14 +553,15 @@ int main(int argc, char **argv)
   XMapWindow(display,win);
 
   CreateColor(display,colmap,lut,0,0,54016,61440);
-  CreateColor(display,colmap,lut,1,0,56576,61440);
+  CreateColor(display,colmap,lut,1,0,0,61440);
   CreateColor(display,colmap,lut,2,0,53248,61440);
   CreateColor(display,colmap,lut,3,0,61400,3584);
   CreateColor(display,colmap,lut,4,59392,0,0);
   CreateColor(display,colmap,lut,5,61400,45056,0);
   CreateColor(display,colmap,lut,6,61400,34816,0);
   CreateColor(display,colmap,lut,7,34816,0,0);
-  CreateColor(display,colmap,lut,8,0,0,0);
+  CreateColor(display,colmap,lut,8,65535,65535,65535);
+  CreateColor(display,colmap,lut,9,0,0,0);
   
   // Create the pixmap of the window 
 
@@ -590,8 +590,9 @@ int main(int argc, char **argv)
       // Clear pixmap with background color 
       for (i = 0 ; i < pmx ; i++)
       { 
-        for (j = 0; j < (pmy-1); j++) Dot(xim,lut,i,j,0); 
+        for (j = 0; j < pmy; j++) Dot(xim,lut,i,j,0); 
       }
+      printf("OK 2\n");
       for (i = 1; i < (X_MAP-1) ; i++)
       {
         for (j = 1; j < (Y_MAP-1) ; j++)
@@ -600,7 +601,9 @@ int main(int argc, char **argv)
           if (map[i][j] == DIAMOND) PutSprite(xim,lut,sprite_mem,1,i*16,j*16);
         }
       }
+      printf("OK 3\n");
       DisplayBorder(xim,lut,pmx,pmy,3);
+      printf("OK 4\n");
 
       png_x = 6;
       png_y = 7;
@@ -671,6 +674,7 @@ int main(int argc, char **argv)
       for (i = 0 ; i < MAX_CRASH ; i++) crsh_flag[i] = 0;
 
       PutSprite(xim,lut,sprite_mem,2,png_x*16,png_y*16);
+      printf("OK 5\n");
 
       XPutImage(display,win,gc,xim,0,0,0,0,xw,yw);
       printf("OK 6\n");
@@ -945,7 +949,7 @@ int main(int argc, char **argv)
           }
           XPutImage(display,win,gc,xim,0,0,0,0,xw,yw);
  
-          usleep(16000);
+          usleep(25000);
         }
         // End of animation loop
       
