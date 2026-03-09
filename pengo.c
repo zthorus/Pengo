@@ -2,7 +2,10 @@
 
 // By S. Morel, Zthorus-Labs, 2026
 
-#include "lal.h"
+#include <X11/X.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/keysymdef.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
@@ -17,6 +20,7 @@
 #define DIAMOND 2
 #define BORDER 3
 #define W_BRDR 8
+#define W_HDR 11
 
 // Pengo states
 #define IDLE 0
@@ -42,6 +46,10 @@
 
 #define NB_SPRITES 32 
 
+#define LEFT_ARROW_K  0xFF51 // XK_Left
+#define RIGHT_ARROW_K 0xFF53 // XK_Right
+#define UP_ARROW_K    0xFF52 // XK_Left
+#define DOWN_ARROW_K  0xFF54 // XK_Right
 #define QUIT_K 0x0051
 #define PAUSE_K 0x0050
 #define ESC_K 0xFF1B
@@ -52,37 +60,71 @@ void NewCubePushed(int **map,int *psh_flag,int *psh_x,int *psh_y, int *psh_dx,in
 
 void NewCubeCrashed(int *crsh_flag,int *crsh_x,int *crsh_y,int x,int y);
 
-void CheckSnobeePushed(unsigned char **pixmap,int **map,int *snb_x,int *snb_y,int *snb_dx,int *snb_dy,int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy, int halfway);
+void CheckSnobeePushed(XImage *xim, unsigned long *lut,int **map,int *snb_x,int *snb_y,int *snb_dx,int *snb_dy,int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy,int halfway);
 
-void ShockSnobee(int *snb_x,int *snb_y,int snb_state,int png_x,int png_y,int png_dx,int png_dy);
-
-void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_dm, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y);
+void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_dm, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y,int level);
 
 void CreateMap(int **map);
 
-void DisplayBorder(unsigned char **pixmap,int pmx,int pmy,unsigned char color);
+void DisplayBorder(XImage *xim,unsigned long *lut,int pmx,int pmy,int color);
+
+void CreateColor(Display *display,Colormap colmap,unsigned long *lut,int i,int r,int g,int b);
 
 void CreateSprite(char **spr_pix,int sprite_num,unsigned char *sprite_mem); 
 
-void PutSprite(unsigned char **pixmap,unsigned char *sprite_mem, int sprite_num, int x, int y);
+void PutSprite(XImage *xim,unsigned long *lut,unsigned char *sprite_mem, int sprite_num, int x, int y);
 
-void EraseSprite(unsigned char **pixmap,int x,int y);
+void EraseSprite(XImage *xim,unsigned long *lut,int x,int y);
+
+void Dot(XImage *xim,unsigned long *lut,int x,int y,int color);
+
+long GetTheKeyNoBlock(Display *display);
+
+void WaitKeyReleased(Display *display);
+
+void CreateCharset(unsigned char *charset,char *charsethexa);
+
+void PrintChar(XImage *xim, unsigned long *lut,unsigned char *charset,int c,int x,int ink, int bgd);
+
+void PrintScore(XImage *xim, unsigned long *lut,unsigned char *charset,int s,int x,int ink, int bgd);
 
 
 int main(int argc, char **argv)
 {
-  LalEnv *theLalEnv;
-  Lal *theLal;
-  Point pt;
+  // X11-specific variables
 
-  unsigned char **pixmap;
+  Display *display;
+  Visual  *visu;
+  XEvent report;
+  int screen;
+  unsigned int depth;
+  GC gc;
+  Window win;
+  XSizeHints sizeHints;
+  char *im;
+  XImage *xim;   // pixmap of the window
+  Colormap colmap;
+  unsigned long lut[16];
+
+  int bgd_r[3];
+  int bgd_g[3];
+  int bgd_b[3];
+  int fgd_r[3];
+  int fgd_g[3];
+  int fgd_b[3];
+
   unsigned char *sprite_mem;
-  //char spr_pix[16][17];
   char **spr_pix;
+  char charsethexa[256];
+  unsigned char charset[128];
 
+  // "Virtual" pixmap size (actual pixmap is displayed with a x3 zoom factor) 
   int pmx = (X_MAP-2)*16 + 2*W_BRDR;
-  int pmy = (Y_MAP-2)*16 + 2*W_BRDR + 1;
-
+  int pmy = (Y_MAP-2)*16 + 2*W_BRDR + W_HDR;
+  // Actual pixmap size
+  int xw = 3*pmx;
+  int yw = 3*pmy;
+ 
   int **map;
 
   int png_x,png_y;
@@ -126,6 +168,7 @@ int main(int argc, char **argv)
   int completed;
   int lives;
   int score;
+  int level;
   int x,y;
   int xc,yc;
   int dxc,dyc;
@@ -133,33 +176,8 @@ int main(int argc, char **argv)
   int done;
   int quit;
   int elec_cnt;
-  
-  pixmap = (unsigned char **)malloc(pmx*sizeof(unsigned char *));
-  if (pixmap == NULL)
-  {
-    printf("Cannot allocate memory for array: pixmap\n");
-    exit(0);
-  }
-  for (i = 0 ; i < pmx ; i++)
-  {
-    pixmap[i] = (unsigned char *)malloc(pmy*sizeof(unsigned char));
-    if (pixmap[i] == NULL)
-    {
-      printf("Cannot allocate memory for array: pixmap[%d]\n",i);
-      exit(0);
-    }
-    else
-    {
-      // fill pixmap with cyan (background color)
-      for (j = 0; j < (pmy-1); j++) pixmap[i][j] = 254; //208;
-    }
-  }
-  // last line of pixmap = 0 and 254 to use full color LUT 
-  for (i = 0 ; i < pmx ; i+=2)
-  {
-     pixmap[i][pmy-1] = 0;
-     pixmap[i+1][pmy-1] = 254;
-  }
+
+ 
   
   spr_pix = (char **)malloc(16*sizeof(char *));
   if (spr_pix == NULL)
@@ -236,7 +254,7 @@ int main(int argc, char **argv)
  
   strcpy(spr_pix[1], "0000004444000000");
   strcpy(spr_pix[2], "0000044444400000");
-  strcpy(spr_pix[3], "0000442442440000");
+  strcpy(spr_pix[3], "0000448448440000");
   strcpy(spr_pix[4], "0000449449440000");
   strcpy(spr_pix[5], "0004444444444000");
   strcpy(spr_pix[6], "0044445555444400");
@@ -302,7 +320,7 @@ int main(int argc, char **argv)
 
   strcpy(spr_pix[1], "0000004444000000");
   strcpy(spr_pix[2], "0000044444400000");
-  strcpy(spr_pix[3], "0000024444440000");
+  strcpy(spr_pix[3], "0000084444440000");
   strcpy(spr_pix[4], "0000094444440000");
   strcpy(spr_pix[5], "0000044444444000");
   strcpy(spr_pix[6], "0000554744474000");
@@ -336,7 +354,7 @@ int main(int argc, char **argv)
 
   strcpy(spr_pix[1], "0000004444000000");
   strcpy(spr_pix[2], "0000044444400000");
-  strcpy(spr_pix[3], "0000444444200000");
+  strcpy(spr_pix[3], "0000444444800000");
   strcpy(spr_pix[4], "0000444444900000");
   strcpy(spr_pix[5], "0004444444400000");
   strcpy(spr_pix[6], "0004744474550000");
@@ -413,7 +431,7 @@ int main(int argc, char **argv)
   strcpy(spr_pix[2], "0000006666000000");
   strcpy(spr_pix[3], "0000066666600000");
   strcpy(spr_pix[4], "0000666666660000");
-  strcpy(spr_pix[5], "0006662662666000");
+  strcpy(spr_pix[5], "0006668668666000");
   strcpy(spr_pix[6], "0006669669666000");
   strcpy(spr_pix[7], "0066666666666600");
   strcpy(spr_pix[8], "0066666556666600");
@@ -434,7 +452,7 @@ int main(int argc, char **argv)
   CreateSprite(spr_pix,19,sprite_mem);
 
   strcpy(spr_pix[4], "0000666666600000");
-  strcpy(spr_pix[5], "0006666666620000");
+  strcpy(spr_pix[5], "0006666666680000");
   strcpy(spr_pix[6], "0006666666690000");
   strcpy(spr_pix[7], "0066666666660000");
   strcpy(spr_pix[8], "0066666666655500");
@@ -446,7 +464,7 @@ int main(int argc, char **argv)
 
   CreateSprite(spr_pix,20,sprite_mem);
 
-  strcpy(spr_pix[5], "0000266666666000");
+  strcpy(spr_pix[5], "0000866666666000");
   strcpy(spr_pix[6], "0000966666666000");
   strcpy(spr_pix[7], "0000666666666600");
   strcpy(spr_pix[8], "0055566666666600");
@@ -480,7 +498,7 @@ int main(int argc, char **argv)
   strcpy(spr_pix[4], "0000000000000000");
   strcpy(spr_pix[5], "0000066666600000");
   strcpy(spr_pix[6], "0006666666666000");
-  strcpy(spr_pix[7], "0066662662666600");
+  strcpy(spr_pix[7], "0066668668666600");
   strcpy(spr_pix[8], "0666669669666660");
   strcpy(spr_pix[9], "6666666666666666");
   strcpy(spr_pix[10],"6666666666666666");
@@ -508,30 +526,95 @@ int main(int argc, char **argv)
   strcpy(spr_pix[2], "0000006666000000");
   strcpy(spr_pix[3], "0000066666600000");
   strcpy(spr_pix[4], "0000666666660000");
-  strcpy(spr_pix[5], "0006662662666000");
+  strcpy(spr_pix[5], "0006668668666000");
   strcpy(spr_pix[6], "0006669669666000");
   strcpy(spr_pix[7], "0066666566666600");
   strcpy(spr_pix[8], "0066665566666600");
   strcpy(spr_pix[9], "0064745544446600");
-  strcpy(spr_pix[9], "0044744444444000");
-  strcpy(spr_pix[10],"0444444444444000");
-  strcpy(spr_pix[11],"0444444444444005");
+  strcpy(spr_pix[10],"0044744444444000");
+  strcpy(spr_pix[11],"0444444444444000");
   strcpy(spr_pix[12],"0444444444444005");
-  strcpy(spr_pix[13],"0444444444444555");
-  strcpy(spr_pix[14],"0000000000000000");
-  strcpy(spr_pix[15],"0000000000000000");
+  strcpy(spr_pix[13],"0444444444444005");
+  strcpy(spr_pix[14],"0444444444444555");
+  strcpy(spr_pix[15],"0044444444444000");
 
   CreateSprite(spr_pix,25,sprite_mem);
 
-  theLalEnv = new LalEnv(argc,argv);
-  theLal = new Lal("Pengo",100,100);
-  theLalEnv->AttachLal(theLal);
+  strcpy(charsethexa,"3C42425A42423C"); // 0 
+  strcat(charsethexa,"0818280808083E"); // 1
+  strcat(charsethexa,"7C02023C40407E"); // 2
+  strcat(charsethexa,"7C02023C02027C"); // 3
+  strcat(charsethexa,"1828487E08083E"); // 4
+  strcat(charsethexa,"7E40407C02027C"); // 5
+  strcat(charsethexa,"3E40407C42423C"); // 6
+  strcat(charsethexa,"7E020408102040"); // 7
+  strcat(charsethexa,"3C42423C42423C"); // 8
+  strcat(charsethexa,"3C42423E02027C"); // 9
+  strcat(charsethexa,"08387838080808"); // flag (level marker)
+  strcat(charsethexa,"1C2A367F7F1436"); // mini-Pengo (life marker)
+  strcat(charsethexa,"00000000000000"); // space
 
-  printf("OK 2\n");
-  theLal->SetLut(COLOR);
-  theLal->NewMap("Pengo",Lblue,0,0,pmx,pmy,3,pixmap,&pt);
-  theLal->Prepare();
-  theLal->Show();
+  CreateCharset(charset,charsethexa);
+
+  // Create the display 
+
+  display = XOpenDisplay(NULL);
+  if (display == NULL)
+  {
+    fprintf(stderr,"Cannot connect to X-server\n");
+    exit(-1);
+  }
+  screen = DefaultScreen(display);
+  visu = XDefaultVisual(display,screen);
+  gc = XCreateGC(display,RootWindow(display,screen),0,NULL);
+  depth = DisplayPlanes(display,screen);
+
+  // Create the window 
+     
+  win = XCreateSimpleWindow(display,RootWindow(display,screen),100,100,xw,yw,4,BlackPixel(display,screen),WhitePixel(display,screen));
+  sizeHints.flags = PPosition|PSize;
+  sizeHints.x = 100;
+  sizeHints.y = 100;
+  sizeHints.width = xw;
+  sizeHints.height= yw;
+  XSetStandardProperties(display,win,"Pengo","Pengo",0,argv,argc,&sizeHints);
+  XSelectInput(display,win,ExposureMask|KeyPressMask|KeyReleaseMask|ButtonPressMask|StructureNotifyMask);
+
+  // Create the color map
+
+  colmap=XCreateColormap(display,win,visu,AllocNone);
+  XSetWindowColormap(display,win,colmap);
+  XInstallColormap(display,colmap);
+  XMapWindow(display,win);
+
+  CreateColor(display,colmap,lut,0,0,54016,61440);
+  CreateColor(display,colmap,lut,1,0,0,61440);
+  CreateColor(display,colmap,lut,2,0,53248,61440);
+  CreateColor(display,colmap,lut,3,0,61400,3584);
+  CreateColor(display,colmap,lut,4,59392,0,0);
+  CreateColor(display,colmap,lut,5,61400,45056,0);
+  CreateColor(display,colmap,lut,6,61400,34816,0);
+  CreateColor(display,colmap,lut,7,34816,0,0);
+  CreateColor(display,colmap,lut,8,65535,65535,65535);
+  CreateColor(display,colmap,lut,9,0,0,0);
+  CreateColor(display,colmap,lut,10,0,0,0);
+ 
+  bgd_r[0] = 0; bgd_g[0] = 54016; bgd_b[0] = 61440;
+  bgd_r[1] = 0; bgd_g[1] = 0; bgd_b[1] = 0;
+  bgd_r[2] = 61440; bgd_g[2] = 50000; bgd_b[2] = 40000;
+  fgd_r[0] = 0; fgd_g[0] = 0; fgd_b[0] = 0;
+  fgd_r[1] = 0; fgd_g[1] = 54816; fgd_b[1] = 61400;
+  fgd_r[2] = 0; fgd_g[2] = 0; fgd_b[2] = 0;
+
+  // Create the pixmap of the window 
+
+  im=(char *)malloc(4*xw*yw*sizeof(char));
+  if (im==NULL)
+  {
+    fprintf(stderr,"Cannot allocate memory for im (window pixmap)\n");
+    exit(-1);
+  }
+  xim=XCreateImage(display,visu,depth,ZPixmap,0,im,xw,yw,32,0);
 
   running = 1;
   quit = 0;
@@ -544,23 +627,32 @@ int main(int argc, char **argv)
     lives = 3;
     score = 0;
     completed = 0;
+    level = 1;
 
     while (!gameOver)
     { 
+      // Select background and score colors depending on level
+ 
+      CreateColor(display,colmap,lut,0,bgd_r[(level-1)%3],bgd_g[(level-1)%3],bgd_b[(level-1)%3]);
+      CreateColor(display,colmap,lut,10,fgd_r[(level-1)%3],fgd_g[(level-1)%3],fgd_b[(level-1)%3]);
+
       // Clear pixmap with background color 
       for (i = 0 ; i < pmx ; i++)
       { 
-        for (j = 0; j < (pmy-1); j++) pixmap[i][j] = 254; //208;
+        for (j = 0; j < pmy; j++) Dot(xim,lut,i,j,0); 
       }
+      printf("OK 2\n");
       for (i = 1; i < (X_MAP-1) ; i++)
       {
         for (j = 1; j < (Y_MAP-1) ; j++)
         {
-          if (map[i][j] == ICE) PutSprite(pixmap,sprite_mem,0,i*16,j*16);
-          if (map[i][j] == DIAMOND) PutSprite(pixmap,sprite_mem,1,i*16,j*16);
+          if (map[i][j] == ICE) PutSprite(xim,lut,sprite_mem,0,i*16,j*16);
+          if (map[i][j] == DIAMOND) PutSprite(xim,lut,sprite_mem,1,i*16,j*16);
         }
       }
-      DisplayBorder(pixmap,pmx,pmy,180);
+      printf("OK 3\n");
+      DisplayBorder(xim,lut,pmx,pmy,3);
+      printf("OK 4\n");
 
       png_x = 6;
       png_y = 7;
@@ -590,18 +682,21 @@ int main(int argc, char **argv)
       snb_ax[0] = VERTICAL;
       snb_dx[0] = 0;
       snb_dy[0] = 1;
+      snb_dm[0] = 0;
       snb_state[0] = REBIRTH;
       snb_x[1] = 11;
       snb_y[1] = 3;
       snb_ax[1] = HORIZONTAL;
       snb_dx[1] = 1;
       snb_dy[1] = 0;
+      snb_dm[1] = 0;
       snb_state[1] = REBIRTH;
       snb_x[2] = 3;
       snb_y[2] = 13;
       snb_ax[2] = VERTICAL;
       snb_dx[2] = 0;
       snb_dy[2] = -1;
+      snb_dm[2] = 0;
       snb_state[2] = REBIRTH;
 
       // Check Snobee initial location (same rule as for Pengo)
@@ -630,9 +725,18 @@ int main(int argc, char **argv)
       for (i = 0 ; i < MAX_PUSH ; i++) psh_flag[i] = 0;
       for (i = 0 ; i < MAX_CRASH ; i++) crsh_flag[i] = 0;
 
-      PutSprite(pixmap,sprite_mem,2,png_x*16,png_y*16);
+      PutSprite(xim,lut,sprite_mem,2,png_x*16,png_y*16);
+      PrintScore(xim,lut,charset,score,2,10,0);
+      for (i = 0 ; i < lives ; i++)
+      {
+        PrintChar(xim,lut,charset,11,10+i,4,0);
+      }
+      for (i = 0 ; i < level ; i++)
+      {
+        if (i < 10) PrintChar(xim,lut,charset,10,20-i,4,0);
+      } 
 
-      theLal->Update();
+      XPutImage(display,win,gc,xim,0,0,0,0,xw,yw);
       printf("OK 6\n");
 
       // Main loop of the game
@@ -651,7 +755,7 @@ int main(int argc, char **argv)
 
         png_dx = 0;
         png_dy = 0;
-        key = theLal->GetTheKeyNoBlock();
+        key = GetTheKeyNoBlock(display);
         if (key != -1)
         {
           switch(key)
@@ -699,7 +803,7 @@ int main(int argc, char **argv)
         }
         if ((png_state == PUSHING) || (png_state == ELEC) || (png_state == CRASHING))
         {
-          PutSprite(pixmap,sprite_mem,png_spr+2,png_x*16,png_y*16);
+          PutSprite(xim,lut,sprite_mem,png_spr+2,png_x*16,png_y*16);
           png_dx = 0;
           png_dy = 0;
         }
@@ -716,8 +820,8 @@ int main(int argc, char **argv)
               }
           }
         }
-        MoveSnobees(map,snb_state,snb_x,snb_y,snb_dx,snb_dy,snb_dm,snb_ax,png_x,png_y,crsh_flag,crsh_x,crsh_y);
-        CheckSnobeePushed(pixmap,map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy,0);
+        MoveSnobees(map,snb_state,snb_x,snb_y,snb_dx,snb_dy,snb_dm,snb_ax,png_x,png_y,crsh_flag,crsh_x,crsh_y,level);
+        CheckSnobeePushed(xim,lut,map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy,0);
 
         // Animations
 
@@ -727,7 +831,7 @@ int main(int argc, char **argv)
 
           if (png_state == MOVING)
           {
-            PutSprite(pixmap,sprite_mem,png_spr+((i/2)%2),png_x*16+png_dx*i,png_y*16+png_dy*i);
+            PutSprite(xim,lut,sprite_mem,png_spr+((i/2)%2),png_x*16+png_dx*i,png_y*16+png_dy*i);
           }
 
           // 2) Pushed cubes and snobees (moving twice faster than other
@@ -752,6 +856,8 @@ int main(int argc, char **argv)
                 if (map[xc+2*dxc][yc+2*dyc] != 0)
                 {
                   psh_flag[j] = 0;
+                  score += 10;
+                  PrintScore(xim,lut,charset,score,2,10,0);
                   // check if snobee was crushed by cube
                   for (l = 0 ; l < NB_SNOBEE ; l++)
                   {
@@ -759,7 +865,7 @@ int main(int argc, char **argv)
                     {
                       snb_state[l] = DEAD;
                       score +=100;
-                      printf("Score: %d\n", score);
+                      PrintScore(xim,lut,charset,score,2,10,0);
                     }
                   }
                 }
@@ -779,7 +885,7 @@ int main(int argc, char **argv)
                 // check if Snobee half-way in front of cube => pushed or crushed
             
                 if (i == 8)
-                  CheckSnobeePushed(pixmap,map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy,1);
+                  CheckSnobeePushed(xim,lut,map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy,1);
 
                 // Check if diamonds are grouped and aligned
                 printf("check diamond alignment...\n");
@@ -814,8 +920,8 @@ int main(int argc, char **argv)
                 printf("Done\n");  
               }
               printf("Moving pushed cube sprite\n");
-              EraseSprite(pixmap,xc*16+2*dxc*(k-1),yc*16+2*dyc*(k-1));
-              PutSprite(pixmap,sprite_mem,ct-1,xc*16+2*dxc*k,yc*16+2*dyc*k);
+              EraseSprite(xim,lut,xc*16+2*dxc*(k-1),yc*16+2*dyc*(k-1));
+              PutSprite(xim,lut,sprite_mem,ct-1,xc*16+2*dxc*k,yc*16+2*dyc*k);
               printf("Done\n");  
             }
           }
@@ -829,12 +935,14 @@ int main(int argc, char **argv)
               xc = crsh_x[j];
               yc = crsh_y[j];
               k= i/4;
-              if (k != 4) PutSprite(pixmap,sprite_mem,14+k,xc*16,yc*16);
+              if (k != 4) PutSprite(xim,lut,sprite_mem,14+k,xc*16,yc*16);
               else // if i == 16 (end of animation loop)
               {
-                EraseSprite(pixmap,xc*16,yc*16);
+                EraseSprite(xim,lut,xc*16,yc*16);
                 map[xc][yc] = 0;
                 crsh_flag[j] = 0;
+                score += 5;
+                PrintScore(xim,lut,charset,score,2,10,0);
               }
             }
           }
@@ -852,35 +960,36 @@ int main(int argc, char **argv)
                 if ((snb_dx[j] == 0) && (snb_dy[j] == -1)) snb_spr = 19; 
                 if ((snb_dx[j] == 1) && (snb_dy[j] == 0)) snb_spr = 20; 
                 if ((snb_dx[j] == -1) && (snb_dy[j] == 0)) snb_spr = 21;
-                PutSprite(pixmap,sprite_mem,snb_spr,snb_x[j]*16+snb_dx[j]*i+k,snb_y[j]*16+snb_dy[j]*i+k);
+                //printf("snobee %d ; phase %d\n",j,i);
+                PutSprite(xim,lut,sprite_mem,snb_spr,snb_x[j]*16+snb_dx[j]*i+k,snb_y[j]*16+snb_dy[j]*i+k);
                 break;
 
               case PUSHED:
                 k = i%8; 
-                PutSprite(pixmap,sprite_mem,18,snb_x[j]*16+2*snb_dx[j]*k,snb_y[j]*16+2*snb_dy[j]*k);
+                PutSprite(xim,lut,sprite_mem,18,snb_x[j]*16+2*snb_dx[j]*k,snb_y[j]*16+2*snb_dy[j]*k);
                 break;
 
               case CRUSHED:
-                if (i == 1) PutSprite(pixmap,sprite_mem,22,snb_x[j]*16,snb_y[j]*16);
-                if (i == 2) EraseSprite(pixmap,snb_x[j]*16,snb_y[j]*16);
-                break;
-
-              case REBIRTH:
-                PutSprite(pixmap,sprite_mem,24,snb_x[j]*16,snb_y[j]*16);
-                break;
-
-              case SHOCKED:
-                PutSprite(pixmap,sprite_mem,23,snb_x[j]*16,snb_y[j]*16);
+                if ((i == 1) || (i == 8)) PutSprite(xim,lut,sprite_mem,22,snb_x[j]*16,snb_y[j]*16);
+                if ((i == 2) || (i == 9)) EraseSprite(xim,lut,snb_x[j]*16,snb_y[j]*16);
                 break;
             
+              case SHOCKED:
+                PutSprite(xim,lut,sprite_mem,23,snb_x[j]*16,snb_y[j]*16);
+                break;
+            }
+            if ((snb_state[j] > ACTIVE) && (snb_state[j] <= REBIRTH))
+            {
+              k = (i/4)%2;
+              PutSprite(xim,lut,sprite_mem,24,snb_x[j]*16+k,snb_y[j]*16+k);
             }
           }
       
           // Electrified border triggered 
           if (png_state == ELEC)
           {
-            if (i < 16) DisplayBorder(pixmap,pmx,pmy,80+16*i); 
-            else DisplayBorder(pixmap,pmx,pmy,180);
+            if ((i%2) == 0)  DisplayBorder(xim,lut,pmx,pmy,3); 
+            else DisplayBorder(xim,lut,pmx,pmy,4);
           }
 
           // Check if pengo and snobee are in contact when at half-way
@@ -893,9 +1002,8 @@ int main(int argc, char **argv)
                 if ((((png_x + png_dx) == snb_x[j]) && ((png_y + png_dy) == snb_y[j])) || ((png_x == (snb_x[j] + snb_dx[j])) && (png_y == (snb_y[j] + snb_dy[j]))) || (((png_x + png_dx) == (snb_x[j] + snb_dx[j])) && ((png_y + png_dy) == (snb_y[j] + snb_dy[j]))))
                 {
                   printf("png x = %d ; png dx = %d ; png y = %d ; png dy =%d ; snb x = %d ; snb dx = %d ; snb y = %d ; snb dy = %d\n",png_x,png_dx,png_y,png_dy,snb_x[j],snb_dx[j],snb_y[j],snb_dy[j]);
-                  EraseSprite(pixmap,16*snb_x[j]+8*snb_dx[j],16*snb_y[j]+8*snb_dy[j]);
-                  EraseSprite(pixmap,16*png_x+8*png_dx,16*png_y+8*png_dy);
-                  //PutSprite(pixmap,sprite_mem,25,png_x*16+8*png_dx,png_y*16+8*png_dy);
+                  EraseSprite(xim,lut,16*snb_x[j]+8*snb_dx[j],16*snb_y[j]+8*snb_dy[j]);
+                  EraseSprite(xim,lut,16*png_x+8*png_dx,16*png_y+8*png_dy);
                   killed = 1;
                   printf("Killed at half-way\n");
                   playing = 0;
@@ -903,12 +1011,14 @@ int main(int argc, char **argv)
                 }
               }
             }
-          } 
-          theLal->Update();
-          usleep(16000);
+          }
+          XPutImage(display,win,gc,xim,0,0,0,0,xw,yw);
+ 
+          usleep(25000);
         }
         // End of animation loop
-      
+     
+        printf("End animation\n"); 
         // Update Pengo and Snobee coordinates on map 
 
         png_x+=png_dx;
@@ -921,6 +1031,7 @@ int main(int argc, char **argv)
             snb_y[j] += snb_dy[j];
           }
         }
+        printf("End update coords\n");
 
         // Check if Pengo and a Snobee touch each other
         for (i = 0 ; i < NB_SNOBEE ; i++)
@@ -937,10 +1048,12 @@ int main(int argc, char **argv)
               printf("Killed shocked snobee !\n");
               snb_state[i] = DEAD;
               score += 100;
+              PrintScore(xim,lut,charset,score,2,10,0);
               printf("Score: %d\n", score);
             }
           }
         }
+        printf("End check Pengo/Snobee touch\n");
 
         // Generate new coordinates for rebirth of dead snobees
         for (i = 0 ; i < NB_SNOBEE ; i++)
@@ -961,6 +1074,7 @@ int main(int argc, char **argv)
             }
           }
         }
+        printf("End new coord rebirth\n");
 
         // Update non-active Snobee states
         for (i = 0 ; i < NB_SNOBEE ; i++)
@@ -970,6 +1084,7 @@ int main(int argc, char **argv)
           // dead
           if ((snb_state[i] <= DEAD) && (snb_state[i] > ACTIVE)) snb_state[i]--;
         }
+        printf("End update non-active snobee state\n");
         // "Cock" the electric border if it has been triggered
         if (elec_cnt > 0) elec_cnt--; 
       }
@@ -977,8 +1092,8 @@ int main(int argc, char **argv)
   
       if (killed)
       {
-        PutSprite(pixmap,sprite_mem,25,png_x*16,png_y*16);
-        theLal->Update();
+        PutSprite(xim,lut,sprite_mem,25,png_x*16,png_y*16);
+        XPutImage(display,win,gc,xim,0,0,0,0,xw,yw);
         killed = 0;
         lives--;
         printf("%d lives remaining\n", lives);
@@ -987,10 +1102,23 @@ int main(int argc, char **argv)
       }
       if (completed)
       {
-        score+=10000;
+        score+=1000;
+        for (j = 1 ; j < (Y_MAP - 1) ; j++)
+        {
+          for (i = 1 ; i < (X_MAP -1) ; i++)
+          {
+            if (map[i][j] == ICE) score+=50;
+          }
+          PrintScore(xim,lut,charset,score,2,10,0);
+          XPutImage(display,win,gc,xim,0,0,0,0,xw,yw);
+          if ((j%2) == 0)  DisplayBorder(xim,lut,pmx,pmy,3); 
+          else DisplayBorder(xim,lut,pmx,pmy,4);
+          usleep(250000);
+        }
         printf("Level completed !\n");
         CreateMap(map);
         completed = 0;
+        level++;
       }
       if (quit) 
       {
@@ -1000,11 +1128,19 @@ int main(int argc, char **argv)
     }
     if (running)
     {
-      printf("Game Over !\n");
+      PrintChar(xim,lut,charset,12,10,10,0);
+      // interleaving (screen dimming effect)  
+      for (j = 3*W_HDR ; j < yw ; j+=2)
+      {
+        for (i = 0 ; i < xw ; i++) XPutPixel(xim,i,j,lut[9]);
+      } 
+      XPutImage(display,win,gc,xim,0,0,0,0,xw,yw);
+      usleep(4000000);
+      WaitKeyReleased(display);
       done = 0;
       while (!done)
       {
-        key = theLal->GetTheKeyNoBlock();
+        key = GetTheKeyNoBlock(display);
         if (key != -1)
         {
           done = 1;
@@ -1016,8 +1152,6 @@ int main(int argc, char **argv)
   }
   // End of "while running" loop
   
-  delete theLal;
-  delete theLalEnv;
   exit(0);
  
 }
@@ -1103,7 +1237,7 @@ void NewCubeCrashed(int *crsh_flag,int *crsh_x,int *crsh_y,int x,int y)
   }
 }
   
-void CheckSnobeePushed(unsigned char **pixmap,int **map,int *snb_x,int *snb_y,int *snb_dx,int *snb_dy,int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy,int halfway)
+void CheckSnobeePushed(XImage *xim, unsigned long *lut,int **map,int *snb_x,int *snb_y,int *snb_dx,int *snb_dy,int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy,int halfway)
 {
   int i,j;
 
@@ -1120,9 +1254,9 @@ void CheckSnobeePushed(unsigned char **pixmap,int **map,int *snb_x,int *snb_y,in
               ((psh_y[i]+psh_dy[i]) == snb_y[j]))
 
           {
-            // Snobee can be half-way out of the cube path. Better to erase it
+            // Snobee can be half-way exiting the cube path. Better to erase it
 
-            EraseSprite(pixmap,16*snb_x[j]+8*halfway*snb_dx[j],16*snb_y[j]+8*halfway*snb_dy[j]);
+            if (snb_state[j] == ACTIVE) EraseSprite(xim,lut,16*snb_x[j]+8*halfway*snb_dx[j],16*snb_y[j]+8*halfway*snb_dy[j]);
             if (map[psh_x[i]+2*psh_dx[i]][psh_y[i]+2*psh_dy[i]] != 0)
             {
               snb_state[j] = CRUSHED;
@@ -1145,7 +1279,7 @@ void CheckSnobeePushed(unsigned char **pixmap,int **map,int *snb_x,int *snb_y,in
                 (snb_state[j] == ACTIVE))
             {
               // "teleport" snobee to be in front of pushed cube
-              EraseSprite(pixmap,16*snb_x[j]+8*halfway*snb_dx[j],16*snb_y[j]+8*halfway*snb_dy[j]);
+              EraseSprite(xim,lut,16*snb_x[j]+8*halfway*snb_dx[j],16*snb_y[j]+8*halfway*snb_dy[j]);
               snb_x[j] += snb_dx[j];
               snb_y[j] += snb_dy[j];
 
@@ -1170,25 +1304,13 @@ void CheckSnobeePushed(unsigned char **pixmap,int **map,int *snb_x,int *snb_y,in
 }
 
 
-void ShockSnobee(int *snb_x,int *snb_y,int *snb_state,int png_x,int png_y,int png_dx,int png_dy)
+void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_dm, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y, int level)
 {
-  int i;
-
-  for (i = 0; i < NB_SNOBEE ; i++)
-  {
-    if (((snb_x[i] == png_x) && (png_dx != 0)) ||
-        ((snb_y[i] == png_y) && (png_dy != 0)))
-    {
-      if (snb_state[i] == ACTIVE) snb_state[i] = SHOCKED;
-    }
-  }
-}
-
-
-void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_dm, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y)
-{
-  int i,k,m;
+  int i,k,m,p,q;
   int findingNextMove;
+
+  if (level > 2) p = 1; else p = 4-level;
+  q = 4+level;
 
   for (i = 0 ; i < NB_SNOBEE ; i++)
   {
@@ -1213,7 +1335,7 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
             }
             else
             {
-              k = rand()%5;
+              k = rand()%q;
               switch(k)
               {
                 case 0: snb_dy[i] = -snb_dy[i];
@@ -1236,7 +1358,7 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
           }
           else
           {
-            k = rand()%3;
+            k = rand()%p;
             if ((k == 0) && (map[snb_x[i]+1][snb_y[i]] == 0) 
                 && (snb_x[i] < p_x)) 
             {
@@ -1269,7 +1391,7 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
             }
             else
             {
-              k = rand()%5;
+              k = rand()%q;
               switch(k)
               {
                 case 0: snb_dx[i] = -snb_dx[i];
@@ -1292,7 +1414,7 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
           }
           else
           {
-            k = rand()%3;
+            k = rand()%p;
             if ((k == 0) && (map[snb_x[i]][snb_y[i]+1] == 0)
                 && (snb_y[i] < p_y)) 
             {
@@ -1498,7 +1620,7 @@ void CreateMap(int **map)
 
 // Display the border 
 
-void DisplayBorder(unsigned char **pixmap,int pmx,int pmy,unsigned char color)
+void DisplayBorder(XImage *xim,unsigned long *lut,int pmx,int pmy,int color)
 {
   int i,j;
 
@@ -1506,26 +1628,38 @@ void DisplayBorder(unsigned char **pixmap,int pmx,int pmy,unsigned char color)
   {
     for (i = 0 ; i < pmx ; i++)
     {
-      pixmap[i][j] = color;
+      Dot(xim,lut,i,j+W_HDR,color);
     }
   }
-  for (j = W_BRDR ; j < (pmy - W_BRDR) ; j++)
+  for (j = W_BRDR ; j < (pmy - W_BRDR - W_HDR) ; j++)
   { 
-    for (i = 0 ; i < W_BRDR ; i++)
+    for (i = 0 ; i < (W_BRDR-1) ; i++)
     {
-      pixmap[i][j] = color;
-      pixmap[pmx-W_BRDR+i][j] = color;
+      Dot(xim,lut,i,j+W_HDR,color);
+      Dot(xim,lut,pmx-W_BRDR+i+1,j+W_HDR,color);
     }
   }
-  for (j = (pmy-W_BRDR) ; j < (pmy-1) ; j++)
+  for (j = (pmy-W_BRDR) ; j < pmy ; j++)
   {
     for (i = 0 ; i < pmx ; i++)
     {
-      pixmap[i][j] = color;
+      Dot(xim,lut,i,j,color);
     }
   }
 }
 
+// Create a color  
+
+void CreateColor(Display *display,Colormap colmap,unsigned long *lut,int i,int r,int g,int b)
+{
+  XColor colorx;
+
+  colorx.red = r;
+  colorx.green = g;
+  colorx.blue = b;
+  XAllocColor(display,colmap,&colorx);
+  lut[i] = colorx.pixel;
+}
 
 // Create a sprite
              
@@ -1533,17 +1667,6 @@ void CreateSprite(char **spr_pix,int sprite_num,unsigned char *sprite_mem)
 {
   int i,j;
   int a,n;
-  unsigned char LUT[10];
-  LUT[0] = 254; //208 ; //cyan
-  LUT[1] = 237;  // blue
-  LUT[2] = 212 ; // light cyan
-  LUT[3] = 178 ; // green 
-  LUT[4] = 50 ; // red 
-  LUT[5] = 90 ; // yellow 
-  LUT[6] = 80; // orange
-  LUT[7] = 30;  // dark red
-  LUT[8] = 254;
-  LUT[9] = 254;
 
   a = 256*sprite_num;
 
@@ -1552,7 +1675,8 @@ void CreateSprite(char **spr_pix,int sprite_num,unsigned char *sprite_mem)
     for (j = 0 ; j < 16 ; j++)
     {
       n = (int)spr_pix[i][j]-48;
-      sprite_mem[a] = LUT[n];
+      sprite_mem[a] = n;
+      //sprite_mem[a] = LUT[n];
       a++;
     }
   }
@@ -1561,7 +1685,7 @@ void CreateSprite(char **spr_pix,int sprite_num,unsigned char *sprite_mem)
 
 // Put a sprite on the playscreen
 
-void PutSprite(unsigned char **pixmap,unsigned char *sprite_mem, int sprite_num, int x, int y)
+void PutSprite(XImage *xim,unsigned long *lut,unsigned char *sprite_mem, int sprite_num, int x, int y)
 {
   int i,j;
   int a;
@@ -1572,7 +1696,7 @@ void PutSprite(unsigned char **pixmap,unsigned char *sprite_mem, int sprite_num,
   {
     for (i = 0 ; i < 16 ; i++)
     {
-      pixmap[x+i-W_BRDR][y+j-W_BRDR] = sprite_mem[a];
+      Dot(xim,lut,x+i-W_BRDR,y+j-W_BRDR+W_HDR,sprite_mem[a]);
       a++;
     }
   }
@@ -1581,7 +1705,7 @@ void PutSprite(unsigned char **pixmap,unsigned char *sprite_mem, int sprite_num,
 
 // Erase a sprite from the playscreen
                     
-void EraseSprite(unsigned char **pixmap,int x,int y)
+void EraseSprite(XImage *xim,unsigned long *lut,int x,int y)
 {
   int i,j;
   
@@ -1589,9 +1713,131 @@ void EraseSprite(unsigned char **pixmap,int x,int y)
   {
     for (i = 0 ; i < 16 ; i++)
     {
-      pixmap[x+i-W_BRDR][y+j-W_BRDR] = 254; //208;
+      Dot(xim,lut,x+i-W_BRDR,y+j-W_BRDR+W_HDR,0);
     }
   }
 }
 
+   
+// draw a dot (that is actually a block of 3x3 pixels) 
+
+void Dot(XImage *xim,unsigned long *lut,int x,int y,int color)
+{ 
+  int xx,yy;
+  
+  xx = 3*x;
+  yy = 3*y;
+
+  XPutPixel(xim,xx,yy,lut[color]);
+  XPutPixel(xim,xx+1,yy,lut[color]);
+  XPutPixel(xim,xx+2,yy,lut[color]);
+  XPutPixel(xim,xx,yy+1,lut[color]);
+  XPutPixel(xim,xx+1,yy+1,lut[color]);
+  XPutPixel(xim,xx+2,yy+1,lut[color]);
+  XPutPixel(xim,xx,yy+2,lut[color]);
+  XPutPixel(xim,xx+1,yy+2,lut[color]);
+  XPutPixel(xim,xx+2,yy+2,lut[color]);
+} 
+
+
+long GetTheKeyNoBlock(Display *display)
+{
+  XEvent report;
+  char kBuf[2];
+  long kk;
+  KeySym theKey;
+  int stillPressed;
+  
+  kk=-1;
+  
+  if (XCheckMaskEvent(display,KeyPressMask,&report) == True)
+  { 
+    XLookupString(&(report.xkey),kBuf,2,&theKey,NULL);
+    kk=(long)theKey;
+    stillPressed = 1;
+    while(stillPressed)
+    {  
+      if (XCheckMaskEvent(display,KeyPressMask,&report) == True)
+      {
+        stillPressed = 1;
+      }
+      else stillPressed = 0;
+    }
+  }
+  return(kk);
+}
+
+void WaitKeyReleased(Display *display)
+{
+  long done;
+  XEvent report;
+
+  done = 0; 
+  while (!done)
+  { 
+    XNextEvent(display,&report);
+    if (report.type == KeyRelease) done = 1;
+  }
+}
+
+
+void CreateCharset(unsigned char *charset,char *charsethexa)
+{
+  int i,k;
+  unsigned char x,y;
+
+  k = 0;
+  for (i = 0 ; i < 104 ; i++)
+  {
+    x = charsethexa[k];
+    if ((x >= '0') && (x <= '9')) x -= 48;
+    if ((x >= 'A') && (x <= 'F')) x -= 55;
+    x *= 16;
+    y = charsethexa[k+1];
+    if ((y >= '0') && (y <= '9')) y -= 48;
+    if ((y >= 'A') && (y <= 'F')) y -= 55;
+    x += y;
+    charset[i] = x;
+    k += 2;
+  }
+}
+
+void PrintChar(XImage *xim, unsigned long *lut,unsigned char *charset,int c,int x,int ink, int bgd)
+{
+  int i,j,k;
+  unsigned char v,m;
+  k =7*c;
+
+  for (i = 0 ; i < 7 ; i++) 
+  {
+    v = (unsigned char)charset[k+i];
+    m = 128;
+    for (j = 0 ; j < 8 ; j++)
+    {
+      if ((v & m) == 0) Dot(xim,lut,8*x+j,i+2,bgd);
+      else Dot(xim,lut,8*x+j,i+2,ink);
+      m /= 2;
+    }
+  }
+}
+
+void PrintScore(XImage *xim, unsigned long *lut,unsigned char *charset,int s,int x,int ink, int bgd)
+{
+  int d,i,m,n;
+
+  m = 100000;
+  if (s > 999999) n = 999999; else n = s;
+  for (i = 0 ; i < 6 ; i++)
+  {
+    d = n/m;
+    PrintChar(xim,lut,charset,d,2+i,ink,bgd);
+    n = n%m;
+    m /= 10;
+  }
+} 
+
+  
+
+
     
+     
