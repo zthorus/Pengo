@@ -14,15 +14,16 @@
 
 // Map (playground) constants
 
-#define X_MAP 15
+#define X_MAP 15  // Map size (including borders)
 #define Y_MAP 17
-#define ICE 1
-#define DIAMOND 2
-#define BORDER 3
-#define W_BRDR 8
-#define W_HDR 11
+#define ICE 1       // Regular ice cube
+#define DIAMOND 2   // Diamond cube
+#define BORDER 3    // Border
+#define W_BRDR 8    // Border width (in pixels)
+#define W_HDR 11    // Header (displaying info like score) in pixels
 
 // Pengo states
+
 #define IDLE 0
 #define MOVING 1
 #define PUSHING 2
@@ -30,27 +31,30 @@
 #define ELEC 4
 
 // Snobee states
+
 #define ACTIVE 0
-#define REBIRTH 9
+#define REBIRTH 9     // Any state between 1 and 9 is "rebirth"
 #define DEAD 10 
 #define PUSHED 70
 #define CRUSHED 80
-#define SHOCKED -6
+#define SHOCKED -6    // Any state between -6 and -1 is "shocked"
 
-#define MAX_PUSH 10
-#define MAX_CRASH 10
-#define NB_SNOBEE 3
+#define MAX_PUSH 10   // Maximum number of cubes being pushed
+#define MAX_CRASH 10  // Maximum number of cubes being crashed
+#define NB_SNOBEE 3   // Number of snobees
 
-#define HORIZONTAL 0
+#define HORIZONTAL 0  // Axes of Snobee motions
 #define VERTICAL   1
 
-#define NB_SPRITES 32 
+#define NB_SPRITES 32  // Number of 16x16 sprites defined
+
+// Codes of keys (similar to keysymdef.h)
 
 #define LEFT_ARROW_K  0xFF51 // XK_Left
 #define RIGHT_ARROW_K 0xFF53 // XK_Right
 #define UP_ARROW_K    0xFF52 // XK_Left
 #define DOWN_ARROW_K  0xFF54 // XK_Right
-#define QUIT_K 0x0051
+#define QUIT_K 0x0051        // Doesn't seem to work
 #define PAUSE_K 0x0050
 #define ESC_K 0xFF1B
  
@@ -102,21 +106,21 @@ int main(int argc, char **argv)
   Window win;
   XSizeHints sizeHints;
   char *im;
-  XImage *xim;   // pixmap of the window
+  XImage *xim;       // Pixmap displayed in the window
   Colormap colmap;
-  unsigned long lut[16];
+  unsigned long lut[16];  // Look-up Table of colors
 
-  int bgd_r[3];
+  int bgd_r[3];  // Background color components (depending on level) 
   int bgd_g[3];
   int bgd_b[3];
-  int fgd_r[3];
+  int fgd_r[3];  // Foreground color (to display score) components
   int fgd_g[3];
   int fgd_b[3];
 
-  unsigned char *sprite_mem;
-  char **spr_pix;
-  char charsethexa[256];
-  unsigned char charset[128];
+  unsigned char *sprite_mem;     // Memory containing sprite shapes
+  char **spr_pix;                // Array for sprite shape definition
+  char charsethexa[256];         // character set bitmap in hexadecimal
+  unsigned char charset[128];    // Memory containing character set bitmap
 
   // "Virtual" pixmap size (actual pixmap is displayed with a x3 zoom factor) 
   int pmx = (X_MAP-2)*16 + 2*W_BRDR;
@@ -125,35 +129,35 @@ int main(int argc, char **argv)
   int xw = 3*pmx;
   int yw = 3*pmy;
  
-  int **map;
+  int **map;  // Map of the game (each cell= cube, border element or nothing)
 
-  int png_x,png_y;
-  int png_dx,png_dy;
-  int png_state;
-  int png_spr;
+  int png_x,png_y;    // Coordinates of Pengo
+  int png_dx,png_dy;  // Motion directions of Pengo
+  int png_state;      // Pengo state (= action done by Pengo)
+  int png_spr;        // Index of sprite representing Pengo
 
-  int psh_flag[MAX_PUSH];
-  int psh_x[MAX_PUSH];
+  int psh_flag[MAX_PUSH];  // Pushed-cube validity flags 
+  int psh_x[MAX_PUSH];     // Coordinates of pushed cubes
   int psh_y[MAX_PUSH];
-  int psh_dx[MAX_PUSH];
+  int psh_dx[MAX_PUSH];    // Motion directions of pushed cubes
   int psh_dy[MAX_PUSH];
-  int psh_typ[MAX_PUSH];
+  int psh_typ[MAX_PUSH];   // Type of pushed cube (ice or diamond)
 
-  int crsh_flag[MAX_CRASH];
-  int crsh_x[MAX_CRASH];
+  int crsh_flag[MAX_CRASH];  // Crashed-cube validity flags
+  int crsh_x[MAX_CRASH];     // Coordinates of crashed cubes
   int crsh_y[MAX_CRASH];
 
-  int snb_state[NB_SNOBEE];
-  int snb_x[NB_SNOBEE];
+  int snb_state[NB_SNOBEE];   // Snobee states
+  int snb_x[NB_SNOBEE];       // Coordinates of Snobees
   int snb_y[NB_SNOBEE];
-  int snb_dx[NB_SNOBEE];
+  int snb_dx[NB_SNOBEE];      // Motion directions of Snobees
   int snb_dy[NB_SNOBEE];
-  int snb_dm[NB_SNOBEE];
-  int snb_ax[NB_SNOBEE];
-  int snb_spr;
+  int snb_dm[NB_SNOBEE];      // Previous motion direction of Snobees 
+  int snb_ax[NB_SNOBEE];      // Motion axis (H or V) of Snobees
+  int snb_spr;                // Index of sprite representing a Snobee 
 
-  int spiral_x[8];
-  int spiral_y[8];
+  int spiral_x[8];  // Spiral pattern used to find new Snobee location
+  int spiral_y[8];  // (to avoid to have Snobee erasing a diamond)
   spiral_x[0] = 1; spiral_x[1] = 0; spiral_x[2] = -1; spiral_x[3] = -1;
   spiral_x[1] = 0; spiral_x[5] = 0; spiral_x[6] = 1 ; spiral_x[7] = 1;
   spiral_y[0] = 0; spiral_y[1] = 1; spiral_y[2] = 0; spiral_y[3] = 0;
@@ -161,24 +165,25 @@ int main(int argc, char **argv)
 
   int i,j,k,l;
   int key;
-  int running;
-  int playing;
-  int killed;
-  int gameOver;
-  int completed;
-  int lives;
+  int running;   // If 1, program is running 
+  int playing;   // If 1, game is running 
+  int killed;    // If 1, Pengo has been killed by a Snobee
+  int gameOver;  // If 1, all Pengo lives have been lost
+  int completed; // If 1, level has been completed (3 diamonds aligned)
+  int lives;     // Number of Pengo lives remaining
   int score;
-  int level;
+  int level;     // Current game level
   int x,y;
-  int xc,yc;
-  int dxc,dyc;
-  int ct;
+  int xc,yc;    // Cube coordinates
+  int dxc,dyc;  // Motion directions of cube
+  int ct;       // Cube type
   int done;
   int quit;
-  int elec_cnt;
+  int elec_cnt; // Countdown before electric border can be activated again
 
  
-  
+   // Memory allocations
+ 
   spr_pix = (char **)malloc(16*sizeof(char *));
   if (spr_pix == NULL)
   {
@@ -216,6 +221,11 @@ int main(int argc, char **argv)
     }
   }
 
+  // Sprite shape definition
+  // (each digit is the color index in the LUT)
+
+  // Cubes
+
   strcpy(spr_pix[0], "0000000000000000");
   strcpy(spr_pix[1], "0011111111111100");
   strcpy(spr_pix[2], "0112211111122110");
@@ -251,6 +261,8 @@ int main(int argc, char **argv)
   strcpy(spr_pix[14],"0111111111111110");
  
   CreateSprite(spr_pix,1,sprite_mem);
+
+  // Pengo
  
   strcpy(spr_pix[1], "0000004444000000");
   strcpy(spr_pix[2], "0000044444400000");
@@ -386,6 +398,8 @@ int main(int argc, char **argv)
 
   CreateSprite(spr_pix,13,sprite_mem);
 
+  // Crashing ice cube
+
   strcpy(spr_pix[0], "0000000000000000");
   strcpy(spr_pix[1], "0000000000000000");
   strcpy(spr_pix[2], "0000000000000000");
@@ -425,6 +439,8 @@ int main(int argc, char **argv)
   strcpy(spr_pix[13],"0002001010000100");
 
   CreateSprite(spr_pix,17,sprite_mem);
+
+  // Snobee
 
   strcpy(spr_pix[0], "0000000000000000");
   strcpy(spr_pix[1], "0000000000000000");
@@ -476,6 +492,8 @@ int main(int argc, char **argv)
 
   CreateSprite(spr_pix,21,sprite_mem);
 
+  // Crushed snobee (exploding)
+
   strcpy(spr_pix[0], "0000000000000000");
   strcpy(spr_pix[1], "0000000000000000");
   strcpy(spr_pix[2], "0000000000000000");
@@ -495,6 +513,8 @@ int main(int argc, char **argv)
 
   CreateSprite(spr_pix,22,sprite_mem);
 
+  // Shocked Snobee
+
   strcpy(spr_pix[4], "0000000000000000");
   strcpy(spr_pix[5], "0000066666600000");
   strcpy(spr_pix[6], "0006666666666000");
@@ -510,6 +530,8 @@ int main(int argc, char **argv)
 
   CreateSprite(spr_pix,23,sprite_mem);
 
+  // Snobee egg ("rebirth" state)
+
   strcpy(spr_pix[4], "0000000660000000");
   strcpy(spr_pix[5], "0000006666000000");
   strcpy(spr_pix[6], "0000066666600000");
@@ -520,6 +542,8 @@ int main(int argc, char **argv)
   strcpy(spr_pix[11],"0000000660000000");
 
   CreateSprite(spr_pix,24,sprite_mem);
+
+  // Snobee killing Pengo
 
   strcpy(spr_pix[0], "0000000000000000");
   strcpy(spr_pix[1], "0000000000000000");
@@ -540,6 +564,8 @@ int main(int argc, char **argv)
 
   CreateSprite(spr_pix,25,sprite_mem);
 
+  // Character bitmaps
+
   strcpy(charsethexa,"3C42425A42423C"); // 0 
   strcat(charsethexa,"0818280808083E"); // 1
   strcat(charsethexa,"7C02023C40407E"); // 2
@@ -550,9 +576,9 @@ int main(int argc, char **argv)
   strcat(charsethexa,"7E020408102040"); // 7
   strcat(charsethexa,"3C42423C42423C"); // 8
   strcat(charsethexa,"3C42423E02027C"); // 9
-  strcat(charsethexa,"08387838080808"); // flag (level marker)
-  strcat(charsethexa,"1C2A367F7F1436"); // mini-Pengo (life marker)
-  strcat(charsethexa,"00000000000000"); // space
+  strcat(charsethexa,"08387838080808"); // Flag (level marker)
+  strcat(charsethexa,"1C2A367F7F1436"); // Mini-Pengo (life marker)
+  strcat(charsethexa,"00000000000000"); // Space character
 
   CreateCharset(charset,charsethexa);
 
@@ -599,7 +625,7 @@ int main(int argc, char **argv)
   CreateColor(display,colmap,lut,9,0,0,0);
   CreateColor(display,colmap,lut,10,0,0,0);
  
-  bgd_r[0] = 0; bgd_g[0] = 54016; bgd_b[0] = 61440;
+  bgd_r[0] = 20000; bgd_g[0] = 54016; bgd_b[0] = 61440;
   bgd_r[1] = 0; bgd_g[1] = 0; bgd_b[1] = 0;
   bgd_r[2] = 61440; bgd_g[2] = 50000; bgd_b[2] = 40000;
   fgd_r[0] = 0; fgd_g[0] = 0; fgd_b[0] = 0;
@@ -621,6 +647,8 @@ int main(int argc, char **argv)
 
   while (running)
   {  
+    // Initialize game
+
     CreateMap(map);
 
     gameOver = 0;
@@ -636,7 +664,8 @@ int main(int argc, char **argv)
       CreateColor(display,colmap,lut,0,bgd_r[(level-1)%3],bgd_g[(level-1)%3],bgd_b[(level-1)%3]);
       CreateColor(display,colmap,lut,10,fgd_r[(level-1)%3],fgd_g[(level-1)%3],fgd_b[(level-1)%3]);
 
-      // Clear pixmap with background color 
+      // Clear pixmap with background color, draw the map 
+
       for (i = 0 ; i < pmx ; i++)
       { 
         for (j = 0; j < pmy; j++) Dot(xim,lut,i,j,0); 
@@ -660,6 +689,7 @@ int main(int argc, char **argv)
 
       // Check Pengo location is not occupied by a diamond
       // If so, look around for a new location (an ice-cube can be sacrified) 
+
       done = 0;
       i = 0;
       while (!done)
@@ -676,6 +706,8 @@ int main(int argc, char **argv)
           i++;
         }
       }
+
+      // Initialize Snobee variables
 
       snb_x[0] = 3;
       snb_y[0] = 3;
@@ -700,6 +732,7 @@ int main(int argc, char **argv)
       snb_state[2] = REBIRTH;
 
       // Check Snobee initial location (same rule as for Pengo)
+
       for (i = 0 ; i < NB_SNOBEE ; i++)
       {
         done = 0;
@@ -720,10 +753,13 @@ int main(int argc, char **argv)
         }
       }
 
+      // Initialize various game variables
+ 
       elec_cnt = 0;
-
       for (i = 0 ; i < MAX_PUSH ; i++) psh_flag[i] = 0;
       for (i = 0 ; i < MAX_CRASH ; i++) crsh_flag[i] = 0;
+
+      // Display Pengo, score, number of lives, level flags
 
       PutSprite(xim,lut,sprite_mem,2,png_x*16,png_y*16);
       PrintScore(xim,lut,charset,score,2,10,0);
@@ -733,29 +769,19 @@ int main(int argc, char **argv)
       }
       for (i = 0 ; i < level ; i++)
       {
-        if (i < 10) PrintChar(xim,lut,charset,10,20-i,4,0);
+        if (i < 10) PrintChar(xim,lut,charset,10,24-i,4,0);
       } 
 
       XPutImage(display,win,gc,xim,0,0,0,0,xw,yw);
-      printf("OK 6\n");
 
       // Main loop of the game
 
       playing=1;
       while(playing)
       {
-        /*
-        for (j= 0; j < Y_MAP ; j++)
-        {
-          for (i = 0 ; i < X_MAP ; i++) printf("%d",map[i][j]);
-          printf("\n");
-        }
-        printf("\n\n");
-        */
-
         png_dx = 0;
         png_dy = 0;
-        key = GetTheKeyNoBlock(display);
+        key = GetTheKeyNoBlock(display); // Poll the keyboard
         if (key != -1)
         {
           switch(key)
@@ -788,6 +814,9 @@ int main(int argc, char **argv)
           }
         }
         MovePengo(map,png_x,png_y,png_dx,png_dy,&png_state,elec_cnt);
+
+        // Actions depending on Pengo state
+
         if (png_state == PUSHING)
         {
           NewCubePushed(map,psh_flag,psh_x,psh_y,psh_dx,psh_dy,psh_typ,png_x,png_y,png_dx,png_dy);
@@ -809,6 +838,8 @@ int main(int argc, char **argv)
         }
         if (png_state == ELEC)
         {
+          // Activate electric border and check if any Snobee has been shocked
+
           elec_cnt = 15;
           for (i = 0 ; i < NB_SNOBEE ; i++)
           {
@@ -849,16 +880,21 @@ int main(int argc, char **argv)
               k = i%8;
               if ((i == 8) || (i == 16))
               {
-                // Cube has moved from cell
+                // Cube has moved from cell on the map
+
                 map[xc][yc] = 0;
                 map[xc+dxc][yc+dyc] = ct;
+
                 // Check if cube can still move
+
                 if (map[xc+2*dxc][yc+2*dyc] != 0)
                 {
                   psh_flag[j] = 0;
                   score += 10;
                   PrintScore(xim,lut,charset,score,2,10,0);
-                  // check if snobee was crushed by cube
+
+                  // Check if snobee was crushed by cube
+
                   for (l = 0 ; l < NB_SNOBEE ; l++)
                   {
                     if ((snb_state[l] == CRUSHED) && (snb_x[l] == xc+dxc) && (snb_y[l] == yc+dyc))
@@ -873,7 +909,9 @@ int main(int argc, char **argv)
                 psh_y[j] += dyc;
                 xc = psh_x[j];
                 yc = psh_y[j];
-                // update coordinates of pushed snobees
+
+                // Update coordinates of pushed snobees
+
                 for (l = 0 ; l < NB_SNOBEE ; l++)
                 {
                   if ((snb_state[l] == PUSHED) && (snb_x[l] == xc) && (snb_y[l] == yc))
@@ -882,13 +920,13 @@ int main(int argc, char **argv)
                     snb_y[l] += dyc;
                   }
                 } 
-                // check if Snobee half-way in front of cube => pushed or crushed
+                // Check if Snobee half-way in front of cube => pushed or crushed
             
                 if (i == 8)
                   CheckSnobeePushed(xim,lut,map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy,1);
 
                 // Check if diamonds are grouped and aligned
-                printf("check diamond alignment...\n");
+
                 if ((psh_flag[j] == 0) && (ct == DIAMOND))
                 {
                   if (xc < (X_MAP - 2))
@@ -936,7 +974,7 @@ int main(int argc, char **argv)
               yc = crsh_y[j];
               k= i/4;
               if (k != 4) PutSprite(xim,lut,sprite_mem,14+k,xc*16,yc*16);
-              else // if i == 16 (end of animation loop)
+              else // If i == 16 (= end of animation loop)
               {
                 EraseSprite(xim,lut,xc*16,yc*16);
                 map[xc][yc] = 0;
@@ -960,7 +998,6 @@ int main(int argc, char **argv)
                 if ((snb_dx[j] == 0) && (snb_dy[j] == -1)) snb_spr = 19; 
                 if ((snb_dx[j] == 1) && (snb_dy[j] == 0)) snb_spr = 20; 
                 if ((snb_dx[j] == -1) && (snb_dy[j] == 0)) snb_spr = 21;
-                //printf("snobee %d ; phase %d\n",j,i);
                 PutSprite(xim,lut,sprite_mem,snb_spr,snb_x[j]*16+snb_dx[j]*i+k,snb_y[j]*16+snb_dy[j]*i+k);
                 break;
 
@@ -985,7 +1022,8 @@ int main(int argc, char **argv)
             }
           }
       
-          // Electrified border triggered 
+          // 5) Electrified border triggered 
+
           if (png_state == ELEC)
           {
             if ((i%2) == 0)  DisplayBorder(xim,lut,pmx,pmy,3); 
@@ -993,6 +1031,7 @@ int main(int argc, char **argv)
           }
 
           // Check if pengo and snobee are in contact when at half-way
+
           if (i == 8)
           {
             for (j = 0 ; j < NB_SNOBEE ; j++)
@@ -1007,7 +1046,7 @@ int main(int argc, char **argv)
                   killed = 1;
                   printf("Killed at half-way\n");
                   playing = 0;
-                  i = 17;     // Stop animation immediately
+                  i = 17;     // => Stop animation immediately
                 }
               }
             }
@@ -1018,7 +1057,6 @@ int main(int argc, char **argv)
         }
         // End of animation loop
      
-        printf("End animation\n"); 
         // Update Pengo and Snobee coordinates on map 
 
         png_x+=png_dx;
@@ -1034,6 +1072,7 @@ int main(int argc, char **argv)
         printf("End update coords\n");
 
         // Check if Pengo and a Snobee touch each other
+
         for (i = 0 ; i < NB_SNOBEE ; i++)
         {
           if ((png_x == snb_x[i]) && (png_y == snb_y[i]))
@@ -1053,9 +1092,9 @@ int main(int argc, char **argv)
             }
           }
         }
-        printf("End check Pengo/Snobee touch\n");
 
         // Generate new coordinates for rebirth of dead snobees
+
         for (i = 0 ; i < NB_SNOBEE ; i++)
         {
           if (snb_state[i] == DEAD)
@@ -1065,7 +1104,7 @@ int main(int argc, char **argv)
             {
               x = rand()%(X_MAP-2)+1;
               y = rand()%(Y_MAP-2)+1;
-              if (map[x][y] == 0)
+              if (map[x][y] == 0)     // Check the cell is empty
               {
                 snb_x[i] = x;
                 snb_y[i] = y;
@@ -1074,9 +1113,9 @@ int main(int argc, char **argv)
             }
           }
         }
-        printf("End new coord rebirth\n");
 
         // Update non-active Snobee states
+
         for (i = 0 ; i < NB_SNOBEE ; i++)
         {
           // shocked
@@ -1084,8 +1123,9 @@ int main(int argc, char **argv)
           // dead
           if ((snb_state[i] <= DEAD) && (snb_state[i] > ACTIVE)) snb_state[i]--;
         }
-        printf("End update non-active snobee state\n");
+
         // "Cock" the electric border if it has been triggered
+
         if (elec_cnt > 0) elec_cnt--; 
       }
       // End of main loop of game (while playing)
@@ -1096,13 +1136,15 @@ int main(int argc, char **argv)
         XPutImage(display,win,gc,xim,0,0,0,0,xw,yw);
         killed = 0;
         lives--;
-        printf("%d lives remaining\n", lives);
         if (lives == 0) gameOver = 1;
         usleep(1000000);
       }
       if (completed)
       {
         score+=1000;
+
+        // Grant a bonus based on the number of remaining ice cubes
+
         for (j = 1 ; j < (Y_MAP - 1) ; j++)
         {
           for (i = 1 ; i < (X_MAP -1) ; i++)
@@ -1115,7 +1157,6 @@ int main(int argc, char **argv)
           else DisplayBorder(xim,lut,pmx,pmy,4);
           usleep(250000);
         }
-        printf("Level completed !\n");
         CreateMap(map);
         completed = 0;
         level++;
@@ -1156,7 +1197,8 @@ int main(int argc, char **argv)
  
 }
 
-
+// Function to find out the new Pengo State
+ 
 void MovePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_state, int elec_cnt)
 {
   int p_state;
@@ -1189,10 +1231,11 @@ void MovePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_
         }
       }
     }
-    // look if Pengo is touching the border
+    // Look if Pengo is touching the border
+
     if (map[png_x+png_dx][png_y+png_dy] == BORDER)
     {
-      // look if electric border can be activated 
+      // Look if electric border can be activated 
       if (elec_cnt == 0) p_state = ELEC; else p_state = IDLE;
     }
   }
@@ -1200,11 +1243,14 @@ void MovePengo(int **map,int png_x, int png_y, int png_dx, int png_dy, int *png_
 }
 
 
+// Function to create a new pushed cube
+
 void NewCubePushed(int **map,int *psh_flag,int *psh_x,int *psh_y, int *psh_dx,int *psh_dy,int *psh_typ,int p_x,int p_y,int dp_x,int dp_y)
 { 
   int i;
  
-  // allocate entry in table
+  // Allocate new entry in table (1st available)
+
   for (i = 0 ; i < MAX_PUSH; i++)
   {
     if (psh_flag[i] == 0)
@@ -1220,11 +1266,15 @@ void NewCubePushed(int **map,int *psh_flag,int *psh_x,int *psh_y, int *psh_dx,in
   }
 }
 
+
+// Function to create a new crashed cube
+
 void NewCubeCrashed(int *crsh_flag,int *crsh_x,int *crsh_y,int x,int y)
 {
   int i;
  
-  // allocate entry in table
+  // Allocate new entry in table (1st available)
+
   for (i = 0 ; i < MAX_CRASH; i++)
   {
     if (crsh_flag[i] == 0)
@@ -1236,7 +1286,9 @@ void NewCubeCrashed(int *crsh_flag,int *crsh_x,int *crsh_y,int x,int y)
     }
   }
 }
-  
+ 
+// Function to check if a Snobee is pushed or crushed by a pushed cube
+ 
 void CheckSnobeePushed(XImage *xim, unsigned long *lut,int **map,int *snb_x,int *snb_y,int *snb_dx,int *snb_dy,int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy,int halfway)
 {
   int i,j;
@@ -1245,7 +1297,8 @@ void CheckSnobeePushed(XImage *xim, unsigned long *lut,int **map,int *snb_x,int 
   {
     if (psh_flag[i] == 1)
     {
-      // look if pushed cube is pushing a snobee
+      // Look if pushed cube is pushing a snobee
+
       for (j = 0; j < NB_SNOBEE ; j++)
       {
         if ((snb_state[j] == ACTIVE) || (snb_state[j] == PUSHED))
@@ -1272,13 +1325,15 @@ void CheckSnobeePushed(XImage *xim, unsigned long *lut,int **map,int *snb_x,int 
           }
           else
           {
-            // look if snobee is about to cross a pushed cube
+            // Look if snobee is about to cross a pushed cube
             // (can also be half-way).  If so, consider it as doomed 
+
             if (((psh_x[i]+psh_dx[i]) == (snb_x[j]+snb_dx[j])) &&
                 ((psh_y[i]+psh_dy[i]) == (snb_y[j]+snb_dy[j])) &&
                 (snb_state[j] == ACTIVE))
             {
-              // "teleport" snobee to be in front of pushed cube
+              // "Teleport" snobee to be in front of pushed cube
+
               EraseSprite(xim,lut,16*snb_x[j]+8*halfway*snb_dx[j],16*snb_y[j]+8*halfway*snb_dy[j]);
               snb_x[j] += snb_dx[j];
               snb_y[j] += snb_dy[j];
@@ -1303,6 +1358,13 @@ void CheckSnobeePushed(XImage *xim, unsigned long *lut,int **map,int *snb_x,int 
   }
 }
 
+// Function to determine the Snobee motions
+// The algorithm is random but with a probability (depending on the level)
+// that the Snobee chases Pengo. If a Snobee meets a cube on its way, it 
+// can make a U-turn, turn left or right or turn to track Pengo. The choice
+// is random, but the probability to chase Pengo increases with the level.
+// Also, if a Snobee has a free path on its side that allows to chase Pengo,
+// it can take it (again, probability to do it increases with the level) 
 
 void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_dm, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y, int level)
 {
@@ -1322,14 +1384,19 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
         k = rand()%4;
         if (snb_ax[i] == VERTICAL)
         {
-          if (snb_dy[i] == 0) snb_dy[i] = snb_dm[i]; // snobee was crashing cube
+          // Snobee was crashing cube, restore its motion direction
+          if (snb_dy[i] == 0) snb_dy[i] = snb_dm[i];
           m = map[snb_x[i]+snb_dx[i]][snb_y[i]+snb_dy[i]];
           if (m != 0)
           {
+            // Cube on the way of Snobee
+
             if ((m == ICE) && (k == 0))
             {
+              // Snobee crashes the cube in its way
+
               NewCubeCrashed(crsh_flag,crsh_x,crsh_y,snb_x[i]+snb_dx[i],snb_y[i]+snb_dy[i]);
-              snb_dm[i] = snb_dy[i]; // memorize direction
+              snb_dm[i] = snb_dy[i]; // Save motion direction
               snb_dy[i] = 0;
               findingNextMove = 0;
             }
@@ -1338,18 +1405,18 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
               k = rand()%q;
               switch(k)
               {
-                case 0: snb_dy[i] = -snb_dy[i];
+                case 0: snb_dy[i] = -snb_dy[i];  // U-turn
                         break;
-                case 1: snb_ax[i] = HORIZONTAL;
+                case 1: snb_ax[i] = HORIZONTAL;  // Right-angle turn 
                         snb_dy[i] = 0;
                         snb_dx[i] = -1;
                         break;
-                case 2: snb_ax[i] = HORIZONTAL;
-                        snb_dy[i] = 0;
+                case 2: snb_ax[i] = HORIZONTAL;  // Right-angle turn
+                        snb_dy[i] = 0;           // (other direction)
                         snb_dx[i] = 1;
                         break;
-                default: snb_ax[i] = HORIZONTAL;
-                        snb_dy[i] = 0;
+                default: snb_ax[i] = HORIZONTAL; // Right-angle turn
+                        snb_dy[i] = 0;           // to chase Pengo
                         if (snb_dx[i] < p_x) snb_dx[i] = 1;
                         else snb_dx[i] = -1;
                         break; 
@@ -1358,6 +1425,8 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
           }
           else
           {
+            // Right-angle turn to chase Pengo, if no cube on the way
+
             k = rand()%p;
             if ((k == 0) && (map[snb_x[i]+1][snb_y[i]] == 0) 
                 && (snb_x[i] < p_x)) 
@@ -1433,15 +1502,15 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
           }
         }
       }
-      //
+      // No-motion hack for debug
       //snb_dx[i] = snb_dy[i] = 0;
       //
     }
-    //printf("snb_x = %d ; snb_y = %d ; snb_dx = %d ; snb_dy = %d ; cell = %d ; snb_ax = %d ; state = %d \n", snb_x[i], snb_y[i], snb_dx[i],snb_dy[i],m,snb_ax[i],snb_state[i]); 
   }
 } 
 
 
+// Fuction to create the game map
   
 void CreateMap(int **map)
 {
@@ -1449,21 +1518,22 @@ void CreateMap(int **map)
   int x,y;
   int d;
 
-  // variable for maze creation
-  int **v;  // array of visited cells
-  int xc,yc; // number of cells along x and y
-  int nc;    // total number of cells
-  int nv;    // number of visited cells
-  int nn;    // number of possible next cells (unvisited yet)
-  int cx[4]; // x of possible next cell
-  int cy[4]; // y of possible next cell
-  int sx[100]; // stack of x visited cells
-  int sy[100]; // stack of y visited cells
-  int sp;      // stack pointer
-  int k;       // random number
-  int t;       // time counter
+  // Variables for maze creation
 
-  // create the borders
+  int **v;     // Array of visited cells
+  int xc,yc;   // Number of cells along x and y
+  int nc;      // Total number of cells
+  int nv;      // Number of visited cells
+  int nn;      // Number of possible next cells (unvisited yet)
+  int cx[4];   // x of possible next cell
+  int cy[4];   // y of possible next cell
+  int sx[100]; // Stack of x visited cells
+  int sy[100]; // Stack of y visited cells
+  int sp;      // Stack pointer
+  int k;       // Random number
+  int t;       // Time counter
+
+  // Create the borders
 
   for (i = 0 ; i < X_MAP ; i++)
   {
@@ -1476,7 +1546,7 @@ void CreateMap(int **map)
      map[X_MAP-1][i] = BORDER;
   }
 
-  // create first an empty field within the borders
+  // Create first an empty field within the borders
 
   for (i = 1 ; i < (X_MAP-1) ; i++)
   {
@@ -1486,9 +1556,9 @@ void CreateMap(int **map)
     }
   }
 
-  // create a grid of ice cubes
+  // Create a grid of ice cubes
 
-  for (i = 2 ; i < (X_MAP-1) ; i+=2)  // i = 1
+  for (i = 2 ; i < (X_MAP-1) ; i+=2) 
   {
     for (j = 1 ; j < (Y_MAP-1) ; j++)
     {
@@ -1503,14 +1573,14 @@ void CreateMap(int **map)
     }
   }
 
-  // create a "maze" = random paths between the cells of the grid
+  // Create a "maze" = random paths between the cells of the grid
 
   // Number of cells along x and y
 
-  xc = (X_MAP-1)/2;  // X_MAP-3
+  xc = (X_MAP-1)/2;
   yc = (Y_MAP-1)/2;
 
-  // create array of visited cells (visited by the maze generator algorithm) 
+  // Create array of visited cells (visited by the maze generator algorithm) 
 
   v = (int **)malloc(xc*sizeof(int *));
   if (v == NULL)
@@ -1529,9 +1599,10 @@ void CreateMap(int **map)
     for (j = 0 ; j < yc ; j++) v[i][j] = 0;
   }
 
-  // first visited cell = at the center
+  // First visited cell is at the center
+
   nv = 1;
-  x = xc/2 + 1; // + 0
+  x = xc/2 + 1;
   y = yc/2 + 1;
   v[x][y] = 1;
 
@@ -1539,7 +1610,7 @@ void CreateMap(int **map)
   sp = 0;
   t = 0;
 
-  // visit all the cells of the grid  (if it doesn´t take too long)
+  // Visit all the cells of the grid (if it doesn´t take too long)
  
   while (nv < nc)
   {
@@ -1568,7 +1639,7 @@ void CreateMap(int **map)
       cy[nn] = y;
       nn++;
     }
-    // if all neighboring cells already visited => step-back
+    // If all neighboring cells already visited => step-back
     if (nn == 0)
     {
       if (sp > 0)
@@ -1585,20 +1656,18 @@ void CreateMap(int **map)
       sp++;
       sx[sp] = x;
       sy[sp] = y;
-      map[x+cx[k]+1][y+cy[k]+1] = 0; // +2
+      map[x+cx[k]+1][y+cy[k]+1] = 0;
       x = cx[k];
       y = cy[k];
       v[x][y] = 1;
       nv++;
       t++;
-      // if timeout, stop here
+      // If timeout, stop here
       if (t > xc*yc*4) break;
     }
   }
 
-  printf("OK map 1\n");
-
-  // put diamonds
+  // Put diamonds
 
   for (i = 0 ; i < 3 ; i++)
   {
@@ -1618,7 +1687,7 @@ void CreateMap(int **map)
 } 
 
 
-// Display the border 
+// Fuction to display the border 
 
 void DisplayBorder(XImage *xim,unsigned long *lut,int pmx,int pmy,int color)
 {
@@ -1648,7 +1717,8 @@ void DisplayBorder(XImage *xim,unsigned long *lut,int pmx,int pmy,int color)
   }
 }
 
-// Create a color  
+
+// Function to create a color in the LUT 
 
 void CreateColor(Display *display,Colormap colmap,unsigned long *lut,int i,int r,int g,int b)
 {
@@ -1661,7 +1731,8 @@ void CreateColor(Display *display,Colormap colmap,unsigned long *lut,int i,int r
   lut[i] = colorx.pixel;
 }
 
-// Create a sprite
+
+// Function to create a sprite shape
              
 void CreateSprite(char **spr_pix,int sprite_num,unsigned char *sprite_mem)
 {
@@ -1683,7 +1754,7 @@ void CreateSprite(char **spr_pix,int sprite_num,unsigned char *sprite_mem)
 } 
 
 
-// Put a sprite on the playscreen
+// Function to put a sprite on the playscreen
 
 void PutSprite(XImage *xim,unsigned long *lut,unsigned char *sprite_mem, int sprite_num, int x, int y)
 {
@@ -1703,7 +1774,7 @@ void PutSprite(XImage *xim,unsigned long *lut,unsigned char *sprite_mem, int spr
 }
   
 
-// Erase a sprite from the playscreen
+// Function to erase a sprite from the playscreen
                     
 void EraseSprite(XImage *xim,unsigned long *lut,int x,int y)
 {
@@ -1719,7 +1790,7 @@ void EraseSprite(XImage *xim,unsigned long *lut,int x,int y)
 }
 
    
-// draw a dot (that is actually a block of 3x3 pixels) 
+// Function to draw a dot (that is actually a block of 3x3 pixels) 
 
 void Dot(XImage *xim,unsigned long *lut,int x,int y,int color)
 { 
@@ -1739,6 +1810,8 @@ void Dot(XImage *xim,unsigned long *lut,int x,int y,int color)
   XPutPixel(xim,xx+2,yy+2,lut[color]);
 } 
 
+
+// Function to poll the keyboard
 
 long GetTheKeyNoBlock(Display *display)
 {
@@ -1767,6 +1840,9 @@ long GetTheKeyNoBlock(Display *display)
   return(kk);
 }
 
+
+// Function to make sure no key is pressed
+
 void WaitKeyReleased(Display *display)
 {
   long done;
@@ -1780,6 +1856,8 @@ void WaitKeyReleased(Display *display)
   }
 }
 
+
+// Function to create the character set bitmap
 
 void CreateCharset(unsigned char *charset,char *charsethexa)
 {
@@ -1802,6 +1880,9 @@ void CreateCharset(unsigned char *charset,char *charsethexa)
   }
 }
 
+
+// Function to print a character on the header line
+
 void PrintChar(XImage *xim, unsigned long *lut,unsigned char *charset,int c,int x,int ink, int bgd)
 {
   int i,j,k;
@@ -1821,6 +1902,9 @@ void PrintChar(XImage *xim, unsigned long *lut,unsigned char *charset,int c,int 
   }
 }
 
+
+// Function to print the score on the header line
+
 void PrintScore(XImage *xim, unsigned long *lut,unsigned char *charset,int s,int x,int ink, int bgd)
 {
   int d,i,m,n;
@@ -1836,8 +1920,3 @@ void PrintScore(XImage *xim, unsigned long *lut,unsigned char *charset,int s,int
   }
 } 
 
-  
-
-
-    
-     
