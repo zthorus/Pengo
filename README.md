@@ -1,8 +1,8 @@
 # Pengo
 Pengo game for Ubuntu
 
-A simple version "8-bit like" of the classic Pengo arcade game for Unix/Linux computers. Requires to have X11 installed.
-The executable for Ubuntu 24.04 (Intel CPU) is provided. It can be generated from the provided source code
+A simple "8-bit like" version of the classic Pengo arcade game for Unix/Linux computers. Requires to have X11 installed.
+The executable for Ubuntu 24.04 (Intel CPU) is provided. For other machines, it can be generated from the provided source code
 by typing from the shell:
 
 g++ pengo.c -o pengo -lm -lX11
