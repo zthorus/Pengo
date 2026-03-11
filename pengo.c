@@ -613,19 +613,19 @@ int main(int argc, char **argv)
   XInstallColormap(display,colmap);
   XMapWindow(display,win);
 
-  CreateColor(display,colmap,lut,0,0,54016,61440);
+  CreateColor(display,colmap,lut,0,0,61440,61440);
   CreateColor(display,colmap,lut,1,0,0,61440);
   CreateColor(display,colmap,lut,2,0,53248,61440);
   CreateColor(display,colmap,lut,3,0,61400,3584);
   CreateColor(display,colmap,lut,4,59392,0,0);
-  CreateColor(display,colmap,lut,5,61400,45056,0);
+  CreateColor(display,colmap,lut,5,61400,34816,0);
   CreateColor(display,colmap,lut,6,61400,34816,0);
   CreateColor(display,colmap,lut,7,34816,0,0);
   CreateColor(display,colmap,lut,8,65535,65535,65535);
   CreateColor(display,colmap,lut,9,0,0,0);
   CreateColor(display,colmap,lut,10,0,0,0);
  
-  bgd_r[0] = 20000; bgd_g[0] = 54016; bgd_b[0] = 61440;
+  bgd_r[0] = 20000; bgd_g[0] = 61440; bgd_b[0] = 61440;
   bgd_r[1] = 0; bgd_g[1] = 0; bgd_b[1] = 0;
   bgd_r[2] = 61440; bgd_g[2] = 50000; bgd_b[2] = 40000;
   fgd_r[0] = 0; fgd_g[0] = 0; fgd_b[0] = 0;
@@ -670,7 +670,6 @@ int main(int argc, char **argv)
       { 
         for (j = 0; j < pmy; j++) Dot(xim,lut,i,j,0); 
       }
-      printf("OK 2\n");
       for (i = 1; i < (X_MAP-1) ; i++)
       {
         for (j = 1; j < (Y_MAP-1) ; j++)
@@ -679,9 +678,7 @@ int main(int argc, char **argv)
           if (map[i][j] == DIAMOND) PutSprite(xim,lut,sprite_mem,1,i*16,j*16);
         }
       }
-      printf("OK 3\n");
       DisplayBorder(xim,lut,pmx,pmy,3);
-      printf("OK 4\n");
 
       png_x = 6;
       png_y = 7;
@@ -955,12 +952,9 @@ int main(int argc, char **argv)
                   }
                   if (completed == 1) playing = 0;
                 }
-                printf("Done\n");  
               }
-              printf("Moving pushed cube sprite\n");
               EraseSprite(xim,lut,xc*16+2*dxc*(k-1),yc*16+2*dyc*(k-1));
               PutSprite(xim,lut,sprite_mem,ct-1,xc*16+2*dxc*k,yc*16+2*dyc*k);
-              printf("Done\n");  
             }
           }
 
@@ -1040,11 +1034,9 @@ int main(int argc, char **argv)
               {
                 if ((((png_x + png_dx) == snb_x[j]) && ((png_y + png_dy) == snb_y[j])) || ((png_x == (snb_x[j] + snb_dx[j])) && (png_y == (snb_y[j] + snb_dy[j]))) || (((png_x + png_dx) == (snb_x[j] + snb_dx[j])) && ((png_y + png_dy) == (snb_y[j] + snb_dy[j]))))
                 {
-                  printf("png x = %d ; png dx = %d ; png y = %d ; png dy =%d ; snb x = %d ; snb dx = %d ; snb y = %d ; snb dy = %d\n",png_x,png_dx,png_y,png_dy,snb_x[j],snb_dx[j],snb_y[j],snb_dy[j]);
                   EraseSprite(xim,lut,16*snb_x[j]+8*snb_dx[j],16*snb_y[j]+8*snb_dy[j]);
                   EraseSprite(xim,lut,16*png_x+8*png_dx,16*png_y+8*png_dy);
                   killed = 1;
-                  printf("Killed at half-way\n");
                   playing = 0;
                   i = 17;     // => Stop animation immediately
                 }
@@ -1069,7 +1061,6 @@ int main(int argc, char **argv)
             snb_y[j] += snb_dy[j];
           }
         }
-        printf("End update coords\n");
 
         // Check if Pengo and a Snobee touch each other
 
@@ -1084,7 +1075,6 @@ int main(int argc, char **argv)
             }
             if ((snb_state[i] >= SHOCKED) && (snb_state[i] < ACTIVE))
             {
-              printf("Killed shocked snobee !\n");
               snb_state[i] = DEAD;
               score += 100;
               PrintScore(xim,lut,charset,score,2,10,0);
