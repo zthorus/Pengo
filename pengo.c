@@ -1072,8 +1072,8 @@ int main(int argc, char **argv)
      
         // Update Pengo and Snobee coordinates on map 
 
-        png_x+=png_dx;
-        png_y+=png_dy;
+        png_x += png_dx;
+        png_y += png_dy;
         for (j = 0 ; j < NB_SNOBEE ; j++)
         {
           if (snb_state[j] == ACTIVE)
@@ -1099,7 +1099,6 @@ int main(int argc, char **argv)
               snb_state[i] = DEAD;
               score += 100;
               PrintScore(xim,lut,charset,score,2,10,0);
-              printf("Score: %d\n", score);
             }
           }
         }
@@ -1120,6 +1119,16 @@ int main(int argc, char **argv)
                 snb_x[i] = x;
                 snb_y[i] = y;
                 done = 1;
+                if ((snb_ax[i] == HORIZONTAL) && (snb_dx[i] == 0))
+                {
+                  snb_dx[i] = 1;
+                  snb_dy[i] = 0;
+                }
+                if ((snb_ax[i] == VERTICAL) && (snb_dy[i] == 0))
+                {
+                  snb_dx[i] = 0;
+                  snb_dy[i] = 1;
+                }
               }
             }
           }
