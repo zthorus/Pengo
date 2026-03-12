@@ -66,7 +66,9 @@ void NewCubeCrashed(int *crsh_flag,int *crsh_x,int *crsh_y,int x,int y);
 
 void CheckSnobeePushed(XImage *xim, unsigned long *lut,int **map,int *snb_x,int *snb_y,int *snb_dx,int *snb_dy,int *snb_state, int *psh_flag,int *psh_x,int *psh_y,int *psh_dx,int *psh_dy,int halfway);
 
-void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_dm, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y,int level);
+void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_dm, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y, int *psh_flag, int *psh_x, int *psh_y, int level);
+
+int NotPushed(int *psh_flag, int *psh_x, int *psh_y, int x, int y);
 
 void CreateMap(int **map);
 
@@ -649,6 +651,8 @@ int main(int argc, char **argv)
   {  
     // Initialize game
 
+    srand(0);
+
     CreateMap(map);
 
     gameOver = 0;
@@ -848,9 +852,26 @@ int main(int argc, char **argv)
               }
           }
         }
-        MoveSnobees(map,snb_state,snb_x,snb_y,snb_dx,snb_dy,snb_dm,snb_ax,png_x,png_y,crsh_flag,crsh_x,crsh_y,level);
+        MoveSnobees(map,snb_state,snb_x,snb_y,snb_dx,snb_dy,snb_dm,snb_ax,png_x,png_y,crsh_flag,crsh_x,crsh_y,psh_flag,psh_x,psh_y,level);
         CheckSnobeePushed(xim,lut,map,snb_x,snb_y,snb_dx,snb_dy,snb_state,psh_flag,psh_x,psh_y,psh_dx,psh_dy,0);
 
+        // For a given cube, Snobee crashing has priority over Pengo Pushing
+        // => Make pushed cube invalid if already crashed by Snobee
+        if (png_state == PUSHING)
+        {
+          for (i = 0 ; i < MAX_PUSH ; i++)
+          {
+            if (psh_flag[i] == 1)
+            {
+              for (j = 0 ; j < MAX_CRASH ; j++)
+              {
+                if ((crsh_flag[j] == 1) && (psh_x[i] == crsh_x[j]) && (psh_y[i] == crsh_y[j])) psh_flag[i] = 0;
+              }
+            }
+          }
+        } 
+                
+               
         // Animations
 
         for (i = 1 ; i <= 16 ; i++)
@@ -1356,7 +1377,7 @@ void CheckSnobeePushed(XImage *xim, unsigned long *lut,int **map,int *snb_x,int 
 // Also, if a Snobee has a free path on its side that allows to chase Pengo,
 // it can take it (again, probability to do it increases with the level) 
 
-void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_dm, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y, int level)
+void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, int *snb_dy, int *snb_dm, int *snb_ax, int p_x, int p_y, int *crsh_flag, int *crsh_x, int *crsh_y, int *psh_flag, int *psh_x, int *psh_y, int level)
 {
   int i,k,m,p,q;
   int findingNextMove;
@@ -1379,9 +1400,9 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
           m = map[snb_x[i]+snb_dx[i]][snb_y[i]+snb_dy[i]];
           if (m != 0)
           {
-            // Cube on the way of Snobee
+            // Cube on the way of Snobee (must be ice and not being pushed)
 
-            if ((m == ICE) && (k == 0))
+            if (((m == ICE) && (k == 0) && NotPushed(psh_flag,psh_x,psh_y,snb_x[i]+snb_dx[i],snb_y[i]+snb_dy[i])))
             {
               // Snobee crashes the cube in its way
 
@@ -1441,7 +1462,7 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
           m = map[snb_x[i]+snb_dx[i]][snb_y[i]+snb_dy[i]];
           if (m != 0)
           {
-            if ((m == ICE) && (k == 0))
+            if (((m == ICE) && (k == 0) && NotPushed(psh_flag,psh_x,psh_y,snb_x[i]+snb_dx[i],snb_y[i]+snb_dy[i])))
             {
               NewCubeCrashed(crsh_flag,crsh_x,crsh_y,snb_x[i]+snb_dx[i],snb_y[i]+snb_dy[i]);
               snb_dm[i] = snb_dx[i]; // memorize direction
@@ -1500,6 +1521,25 @@ void MoveSnobees(int **map,int *snb_state, int *snb_x, int *snb_y, int *snb_dx, 
 } 
 
 
+// Function that reports 1 if a cube is not being pushed by Pengo
+
+int NotPushed(int *psh_flag, int *psh_x, int *psh_y, int x, int y)
+{
+  int i,r;
+  
+  r = 1;
+
+  for (i = 0 ; i < MAX_PUSH ; i++)
+  {
+    if (psh_flag[i] == 1)
+    {
+      if ((psh_x[i] == x) && (psh_y[i] == y)) r = 0;
+    }
+  }
+  return(r);
+}
+
+  
 // Fuction to create the game map
   
 void CreateMap(int **map)
@@ -1690,7 +1730,7 @@ void DisplayBorder(XImage *xim,unsigned long *lut,int pmx,int pmy,int color)
       Dot(xim,lut,i,j+W_HDR,color);
     }
   }
-  for (j = W_BRDR ; j < (pmy - W_BRDR - W_HDR) ; j++)
+  for (j = W_BRDR ; j < (pmy - W_BRDR - W_HDR + 1) ; j++)
   { 
     for (i = 0 ; i < (W_BRDR-1) ; i++)
     {
@@ -1698,7 +1738,7 @@ void DisplayBorder(XImage *xim,unsigned long *lut,int pmx,int pmy,int color)
       Dot(xim,lut,pmx-W_BRDR+i+1,j+W_HDR,color);
     }
   }
-  for (j = (pmy-W_BRDR) ; j < pmy ; j++)
+  for (j = (pmy-W_BRDR+1) ; j < pmy ; j++)
   {
     for (i = 0 ; i < pmx ; i++)
     {
