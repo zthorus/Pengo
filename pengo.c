@@ -2,6 +2,12 @@
 
 // By S. Morel, Zthorus-Labs, 2026
 
+/* Change-Log:
+   -----------
+   2026-07-27: corrected bug in spiral_x and spiral_y setting.
+               corrected free-ing of v array in CreateMap
+*/
+
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -161,9 +167,9 @@ int main(int argc, char **argv)
   int spiral_x[8];  // Spiral pattern used to find new Snobee location
   int spiral_y[8];  // (to avoid to have Snobee erasing a diamond)
   spiral_x[0] = 1; spiral_x[1] = 0; spiral_x[2] = -1; spiral_x[3] = -1;
-  spiral_x[1] = 0; spiral_x[5] = 0; spiral_x[6] = 1 ; spiral_x[7] = 1;
+  spiral_x[4] = 0; spiral_x[5] = 0; spiral_x[6] = 1 ; spiral_x[7] = 1;
   spiral_y[0] = 0; spiral_y[1] = 1; spiral_y[2] = 0; spiral_y[3] = 0;
-  spiral_y[1] = -1; spiral_y[5] = -1; spiral_y[6] = 0 ; spiral_y[7] = 0;
+  spiral_y[4] = -1; spiral_y[5] = -1; spiral_y[6] = 0 ; spiral_y[7] = 0;
 
   int i,j,k,l;
   int key;
@@ -1722,6 +1728,7 @@ void CreateMap(int **map)
       }
     }
   }
+  for (i = 0 ; i < xc ; i++) free(v[i]);
   free(v);
 } 
 
